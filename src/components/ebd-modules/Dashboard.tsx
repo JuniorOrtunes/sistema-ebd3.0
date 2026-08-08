@@ -79,13 +79,25 @@ export function Dashboard() {
     const profsNosAlunos = listaAlunos.filter(a => a.eProfessor).length;
     setTotalProfessores(profsNosAlunos);
 
-    // 3. Dados de Encerramento (Classes, Presentes, Visitantes e Gráficos)
+    // 2.1. Contagem correta de Aulas/Classes Ativas (busca do cadastro oficial de turmas ou filtra por ativa === true)
+    const savedClasses = localStorage.getItem('ebd_classes') || localStorage.getItem('ebd_turmas');
+    if (savedClasses) {
+      try {
+        const listaClasses: ClassItem[] = JSON.parse(savedClasses);
+        const classesAtivas = listaClasses.filter(c => c.ativa !== false);
+        setTotalClasses(classesAtivas.length);
+      } catch (e) {
+        setTotalClasses(0);
+      }
+    } else {
+      setTotalClasses(0);
+    }
+
+    // 3. Dados de Encerramento (Presentes, Visitantes e Gráficos da última sessão)
     const savedEncerramento = localStorage.getItem('ebd_encerramento_dados');
     if (savedEncerramento) {
       try {
         const dadosEncerramento: ClassItem[] = JSON.parse(savedEncerramento);
-        
-        setTotalClasses(dadosEncerramento.length);
 
         let sumPresentes = 0;
         let sumVisitantes = 0;
@@ -120,7 +132,6 @@ export function Dashboard() {
         console.error('Erro ao ler dados de encerramento:', e);
       }
     } else {
-      setTotalClasses(0);
       setTotalPresentes(0);
       setTotalVisitantes(0);
       setPercentualPresenca(0);
@@ -132,7 +143,7 @@ export function Dashboard() {
     { label: 'ALUNOS MATRICULADOS', value: totalAlunos, icon: GraduationCap, color: 'text-indigo-600', bg: 'bg-indigo-50' },
     { label: 'PRESENTES HOJE', value: totalPresentes, icon: CheckSquare, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'VISITANTES', value: totalVisitantes, icon: UserPlus, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'AULAS ATIVAS', value: totalClasses, icon: Building2, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'CLASSES ATIVAS', value: totalClasses, icon: Building2, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'PROFESSORES', value: totalProfessores, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
     { label: 'PRESENÇA GERAL', value: percentualPresenca, icon: BarChart3, color: 'text-cyan-600', bg: 'bg-cyan-50', isPercentage: true },
   ];
