@@ -9,9 +9,10 @@ import { Comparativos } from './components/ebd-modules/Comparativos';
 import { UserPlus, Key, Eye, EyeOff, X, Trash2 } from 'lucide-react';
 import Login from './components/Login';
 import Chamada from './components/Chamada';
+import { db } from './firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
 export default function App() {
-  // Controle de Perfis de Acesso persistido no localStorage
   const [perfilLogado, setPerfilLogado] = useState<'nenhum' | 'professor' | 'superintendencia'>(() => {
     return (localStorage.getItem('ebd_perfil_logado') as any) || 'nenhum';
   });
@@ -20,7 +21,6 @@ export default function App() {
     return localStorage.getItem('ebd_classe_professor') || '';
   });
 
-  // Efeitos para sincronizar com o localStorage sempre que os estados mudarem
   useEffect(() => {
     localStorage.setItem('ebd_perfil_logado', perfilLogado);
   }, [perfilLogado]);
@@ -33,14 +33,27 @@ export default function App() {
     }
   }, [classeAtivaProfessor]);
 
-  // Estado para controlar a aba ativa na barra lateral
   const [abaAtiva, setAbaAtiva] = useState('dashboard');
+  const [superintendentes, setSuperintendentes] = useState<Superintendente[]>([]);
 
-  const [superintendentes, setSuperintendentes] = useState<Superintendente[]>([
-    { id: '1', nome: 'Carlos Ortunes Junior', usuario: 'ortunes', dataCadastro: '05/08/2026', isVoce: true, ativo: true },
-  ]);
+  // Carregar superintendentes do Firestore ao iniciar
+  useEffect(() => {
+    async function carregarSuperintendentes() {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'superintendentes'));
+        const lista: Superintendente[] = querySnapshot.docs.map(docSnap => ({
+          id: docSnap.id,
+          ...docSnap.data()
+        })) as Superintendente[];
+        
+        setSuperintendentes(lista);
+      } catch (error) {
+        console.error("Erro ao carregar superintendentes:", error);
+      }
+    }
+    carregarSuperintendentes();
+  }, []);
 
-  // Modais e Estados do Formulário de Superintendentes
   const [modalAberto, setModalAberto] = useState(false);
   const [modalSenhaAberto, setModalSenhaAberto] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
@@ -50,14 +63,11 @@ export default function App() {
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
 
-  // Estados para mostrar/ocultar senha
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
 
-  // Identificar o superintendente atual (marcado como 'isVoce' ou o primeiro ativo)
   const superintendenteAtual = superintendentes.find(s => s.isVoce) || superintendentes[0];
 
-  // Abrir modal para novo
   const abrirNovo = () => {
     setEditandoId(null);
     setNome('');
@@ -67,7 +77,6 @@ export default function App() {
     setModalAberto(true);
   };
 
-  // Abrir modal para editar
   const abrirEditar = (sup: Superintendente) => {
     setEditandoId(sup.id);
     setNome(sup.nome);
@@ -77,26 +86,33 @@ export default function App() {
     setModalAberto(true);
   };
 
-  // Abrir modal de alterar senha
   const abrirAlterarSenha = (_id: string) => {
     setSenha('');
     setConfirmarSenha('');
     setModalSenhaAberto(true);
   };
 
-  // Alternar Status Ativo / Inativo
-  const toggleAtivo = (id: string, isVoce?: boolean) => {
+  const toggleAtivo = async (id: string, isVoce?: boolean) => {
     if (isVoce) {
       alert('Você não pode desativar seu próprio usuário ativo.');
       return;
     }
-    setSuperintendentes(superintendentes.map(s => 
-      s.id === id ? { ...s, ativo: !s.ativo } : s
-    ));
+    const supAlvo = superintendentes.find(s => s.id === id);
+    if (!supAlvo) return;
+
+    const novoStatus = !supAlvo.ativo;
+
+    try {
+      await updateDoc(doc(db, 'superintendentes', id), { ativo: novoStatus });
+      setSuperintendentes(superintendentes.map(s => 
+        s.id === id ? { ...s, ativo: novoStatus } : s
+      ));
+    } catch (error) {
+      console.error("Erro ao alterar status:", error);
+    }
   };
 
-  // Salvar Novo ou Edição de Superintendente
-  const handleSalvar = (e: React.FormEvent) => {
+  const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nome.trim() || !usuario.trim()) {
       alert('Preencha todos os campos obrigatórios.');
@@ -113,28 +129,31 @@ export default function App() {
       return;
     }
 
-    if (editandoId) {
-      setSuperintendentes(superintendentes.map(s => s.id === editandoId ? {
-        ...s,
-        nome,
-        usuario
-      } : s));
-    } else {
-      const novo: Superintendente = {
-        id: Date.now().toString(),
-        nome,
-        usuario,
-        dataCadastro: new Date().toLocaleDateString('pt-BR'),
-        isVoce: false,
-        ativo: true
-      };
-      setSuperintendentes([novo, ...superintendentes]);
+    try {
+      if (editandoId) {
+        await updateDoc(doc(db, 'superintendentes', editandoId), { nome, usuario });
+        setSuperintendentes(superintendentes.map(s => s.id === editandoId ? {
+          ...s,
+          nome,
+          usuario
+        } : s));
+      } else {
+        const novo: Omit<Superintendente, 'id'> = {
+          nome,
+          usuario,
+          dataCadastro: new Date().toLocaleDateString('pt-BR'),
+          isVoce: false,
+          ativo: true
+        };
+        const docRef = await addDoc(collection(db, 'superintendentes'), novo);
+        setSuperintendentes([{ id: docRef.id, ...novo }, ...superintendentes]);
+      }
+      setModalAberto(false);
+    } catch (error) {
+      console.error("Erro ao salvar superintendente:", error);
     }
-
-    setModalAberto(false);
   };
 
-  // Salvar Alteração de Senha Isolada
   const handleSalvarSenha = (e: React.FormEvent) => {
     e.preventDefault();
     if (!senha || senha.length < 6) {
@@ -150,18 +169,21 @@ export default function App() {
     setModalSenhaAberto(false);
   };
 
-  // Excluir
-  const handleExcluir = (id: string, isVoce?: boolean) => {
+  const handleExcluir = async (id: string, isVoce?: boolean) => {
     if (isVoce) {
       alert('Você não pode excluir seu próprio usuário ativo.');
       return;
     }
     if (confirm('Tem certeza que deseja excluir permanentemente este superintendente?')) {
-      setSuperintendentes(superintendentes.filter(s => s.id !== id));
+      try {
+        await deleteDoc(doc(db, 'superintendentes', id));
+        setSuperintendentes(superintendentes.filter(s => s.id !== id));
+      } catch (error) {
+        console.error("Erro ao excluir:", error);
+      }
     }
   };
 
-  // 1. TELA DE LOGIN / SELEÇÃO DE PERFIL
   if (perfilLogado === 'nenhum') {
     return (
       <Login 
@@ -177,7 +199,6 @@ export default function App() {
     );
   }
 
-  // 2. TELA DE CHAMADA DO PROFESSOR
   if (perfilLogado === 'professor') {
     return (
       <div className="min-h-screen bg-slate-900 text-white flex flex-col">
@@ -204,10 +225,8 @@ export default function App() {
     );
   }
 
-  // 3. PAINEL DA SUPERINTENDÊNCIA
   return (
     <div className="flex h-screen bg-gray-50/50 overflow-hidden">
-      {/* Barra Lateral Fixa com Nome do Usuário e Botão de Sair Integrados */}
       <Sidebar 
         abaAtiva={abaAtiva} 
         setAbaAtiva={setAbaAtiva} 
@@ -215,10 +234,7 @@ export default function App() {
         onLogout={() => setPerfilLogado('nenhum')}
       />
 
-      {/* Área de Conteúdo Principal */}
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
-
-        {/* Renderização condicional baseada na aba ativa */}
         {abaAtiva === 'dashboard' && <Dashboard />}
         {abaAtiva === 'alunos' && <Alunos />}
         {abaAtiva === 'classes' && <ClassesModule />}
@@ -227,8 +243,6 @@ export default function App() {
 
         {abaAtiva === 'superintendentes' && (
           <div className="space-y-6">
-            
-            {/* Cabeçalho da Seção */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
@@ -244,7 +258,6 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Lista de Superintendentes */}
               <div className="divide-y divide-gray-100">
                 {superintendentes.map((sup) => (
                   <div key={sup.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 first:pt-0 last:pb-0">
@@ -265,7 +278,6 @@ export default function App() {
                       </p>
                     </div>
 
-                    {/* Botões de Ação da Lista */}
                     <div className="flex items-center gap-2 self-end sm:self-center">
                       <button 
                         onClick={() => toggleAtivo(sup.id, sup.isVoce)}
@@ -314,7 +326,6 @@ export default function App() {
         )}
       </main>
 
-      {/* MODAL: NOVO / EDITAR SUPERINTENDENTE */}
       {modalAberto && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-gray-100 p-6 space-y-5">
@@ -416,7 +427,6 @@ export default function App() {
         </div>
       )}
 
-      {/* MODAL: ALTERAR SENHA ISOLADA */}
       {modalSenhaAberto && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-gray-100 p-6 space-y-5">

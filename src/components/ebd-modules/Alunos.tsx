@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ALUNOS_INICIAIS, type Aluno } from '../../lib/ebd';
 import { UserPlus, Search, ChevronDown, Edit2, X, Calendar, MapPin, Loader2, Trash2, Power } from 'lucide-react';
+import { db } from '../../firebase'; 
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
 interface ClassItem {
-  id: number;
+  id: number | string;
   nome: string;
   faixaEtaria: string;
   sala: string;
@@ -11,38 +13,70 @@ interface ClassItem {
 }
 
 export function Alunos() {
-  const [alunos, setAlunos] = useState<Aluno[]>(() => {
-    const saved = localStorage.getItem('ebd_alunos');
-    if (saved) {
-      try {
-        const parsed: Aluno[] = JSON.parse(saved);
-        return parsed.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
-      } catch (e) {
-        console.error('Erro ao ler alunos do localStorage:', e);
-      }
-    }
-    return ALUNOS_INICIAIS.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
-  });
+  const [alunos, setAlunos] = useState<Aluno[]>([]);
+  const [loading, setLoading] = useState(true);
   
   const [filtroClasse, setFiltroClasse] = useState('Todas');
   const [busca, setBusca] = useState('');
 
-  // Carrega as classes cadastradas no localStorage e já ordena por ordem alfabética
   const [classesDisponiveis, setClassesDisponiveis] = useState<ClassItem[]>([]);
 
+  // Carregar Classes do Firestore ou localStorage (mantendo compatibilidade)
   useEffect(() => {
-    const savedClasses = localStorage.getItem('ebd_classes');
-    if (savedClasses) {
-      const parsed: ClassItem[] = JSON.parse(savedClasses);
-      parsed.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
-      setClassesDisponiveis(parsed);
-    }
+    const carregarClasses = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'classes'));
+        if (!querySnapshot.empty) {
+          const listaClasses = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as ClassItem[];
+          listaClasses.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+          setClassesDisponiveis(listaClasses);
+          return;
+        }
+      } catch (e) {
+        console.error('Erro ao buscar classes do Firestore:', e);
+      }
+
+      // Fallback para localStorage caso não encontre no Firestore
+      const savedClasses = localStorage.getItem('ebd_classes');
+      if (savedClasses) {
+        const parsed: ClassItem[] = JSON.parse(savedClasses);
+        parsed.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+        setClassesDisponiveis(parsed);
+      }
+    };
+
+    carregarClasses();
   }, []);
 
-  // Salva no localStorage sempre que a lista de alunos for alterada (Adicionar, Editar, Remover, Ativar/Inativar)
+  // Carregar Alunos do Firestore
+  const carregarAlunos = async () => {
+    try {
+      setLoading(true);
+      const querySnapshot = await getDocs(collection(db, 'alunos'));
+      if (!querySnapshot.empty) {
+        const listaAlunos = querySnapshot.docs.map(docSnap => ({
+          id: docSnap.id,
+          ...docSnap.data()
+        })) as Aluno[];
+        listaAlunos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+        setAlunos(listaAlunos);
+      } else {
+        // Se estiver vazio no Firestore, podemos carregar os iniciais ou deixar vazio
+        setAlunos(ALUNOS_INICIAIS.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })));
+      }
+    } catch (e) {
+      console.error('Erro ao carregar alunos do Firestore:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('ebd_alunos', JSON.stringify(alunos));
-  }, [alunos]);
+    carregarAlunos();
+  }, []);
 
   // Estados do formulário
   const [editandoId, setEditandoId] = useState<string | null>(null);
@@ -87,8 +121,8 @@ export function Alunos() {
     }
   };
 
-  // Salvar / Atualizar registro com ordenação alfabética
-  const handleSalvar = (e: React.FormEvent) => {
+ // Salvar / Atualizar registro no Firestore
+  const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nome.trim()) {
       alert('O nome do aluno é obrigatório.');
@@ -96,65 +130,86 @@ export function Alunos() {
     }
 
     const classeFinal = classe === 'Sem Classe' ? 'Geral' : classe;
+    const dataAtual = new Date().toISOString().split('T')[0];
 
-    if (editandoId) {
-      const listaAtualizada = alunos.map(a => a.id === editandoId ? {
-        ...a,
-        nome,
-        classe: classeFinal,
-        telefone,
-        nascimento,
-        casamento,
-        cep,
-        rua,
-        numero,
-        complemento,
-        bairro,
-        cidade,
-        eProfessor,
-        classeLeciona: eProfessor ? classeLeciona : ''
-      } : a);
-      
-      // Ordena a lista atualizada alfabéticamente
-      listaAtualizada.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
-      setAlunos(listaAtualizada);
-    } else {
-      const novoAluno: Aluno = {
-        id: Date.now().toString(),
-        nome,
-        classe: classeFinal,
-        situacao: 'Ativo',
-        telefone,
-        nascimento,
-        casamento,
-        cep,
-        rua,
-        numero,
-        complemento,
-        bairro,
-        cidade,
-        eProfessor,
-        classeLeciona: eProfessor ? classeLeciona : '',
-        batizado: true,
-        biblia: true,
-        revista: true,
-        oferta: 0
-      };
-      
-      const novaLista = [novoAluno, ...alunos];
-      // Ordena a nova lista alfabéticamente
-      novaLista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
-      setAlunos(novaLista);
+    try {
+      if (editandoId) {
+        const alunoRef = doc(db, 'alunos', editandoId);
+        const dadosAtualizados = {
+          nome,
+          turma: classeFinal,
+          classe: classeFinal,
+          telefone,
+          nascimento,
+          casamento,
+          cep,
+          rua,
+          numero,
+          complemento,
+          bairro,
+          cidade,
+          eProfessor,
+          classeLeciona: eProfessor ? classeLeciona : ''
+        };
+
+        await updateDoc(alunoRef, dadosAtualizados);
+        
+        setAlunos(prev => 
+          prev.map(a => a.id === editandoId ? { ...a, ...dadosAtualizados } : a)
+              .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }))
+        );
+      } else {
+        const novoAlunoPayload = {
+          nome,
+          turma: classeFinal,
+          classe: classeFinal,
+          ativo: true,
+          situacao: 'Ativo',
+          dataCadastro: dataAtual,
+          telefone,
+          nascimento,
+          casamento,
+          cep,
+          rua,
+          numero,
+          complemento,
+          bairro,
+          cidade,
+          eProfessor,
+          classeLeciona: eProfessor ? classeLeciona : '',
+          batizado: true,
+          biblia: true,
+          revista: true,
+          oferta: 0
+        };
+
+        const docRef = await addDoc(collection(db, 'alunos'), novoAlunoPayload);
+        
+        // Garante que o ID gerado pelo Firestore entre corretamente no objeto do estado
+        const novoAlunoComId = {
+          id: docRef.id,
+          ...novoAlunoPayload
+        } as unknown as Aluno;
+
+        setAlunos(prev => 
+          [...prev, novoAlunoComId]
+            .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }))
+        );
+      }
+
+      limparFormulario();
+      alert('Aluno salvo com sucesso!');
+    } catch (error) {
+      console.error('Erro ao salvar aluno no Firestore:', error);
+      alert('Erro ao salvar aluno. Verifique o console.');
     }
-
-    limparFormulario();
   };
 
   // Carregar dados para edição
   const handleEditar = (aluno: Aluno) => {
     setEditandoId(aluno.id);
     setNome(aluno.nome || '');
-    setClasse(aluno.classe || 'Sem Classe');
+    setClasse(aluno.classe || aluno.turma || 'Sem Classe');
     setNascimento(aluno.nascimento || '');
     setCasamento(aluno.casamento || '');
     setTelefone(aluno.telefone || '');
@@ -170,15 +225,36 @@ export function Alunos() {
   };
 
   // Alternar Status (Ativo / Inativo)
-  const handleAlternarStatus = (id: string, situacaoAtual: string) => {
+  const handleAlternarStatus = async (id: string, situacaoAtual: string) => {
     const novaSituacao = situacaoAtual === 'Ativo' ? 'Inativo' : 'Ativo';
-    setAlunos(alunos.map(a => a.id === id ? { ...a, situacao: novaSituacao as 'Ativo' | 'Inativo' | 'Visitante' } : a));
+    const novoAtivo = novaSituacao === 'Ativo';
+
+    try {
+      const alunoRef = doc(db, 'alunos', id);
+      await updateDoc(alunoRef, { 
+        situacao: novaSituacao,
+        ativo: novoAtivo 
+      });
+
+      setAlunos(prev => 
+        prev.map(a => a.id === id ? { ...a, situacao: novaSituacao as any, ativo: novoAtivo } : a)
+      );
+    } catch (error) {
+      console.error('Erro ao alterar status do aluno:', error);
+      alert('Erro ao atualizar status.');
+    }
   };
 
   // Excluir aluno
-  const handleRemover = (id: string) => {
+  const handleRemover = async (id: string) => {
     if (confirm('Tem certeza que deseja remover este aluno?')) {
-      setAlunos(alunos.filter(a => a.id !== id));
+      try {
+        await deleteDoc(doc(db, 'alunos', id));
+        setAlunos(prev => prev.filter(a => a.id !== id));
+      } catch (error) {
+        console.error('Erro ao excluir aluno:', error);
+        alert('Erro ao excluir aluno.');
+      }
     }
   };
 
@@ -203,8 +279,8 @@ export function Alunos() {
   // Filtro de lista com ordenação alfabética automática
   const alunosFiltrados = alunos
     .filter(a => {
-      const matchBusca = a.nome.toLowerCase().includes(busca.toLowerCase());
-      const matchClasse = filtroClasse === 'Todas' || a.classe === filtroClasse;
+      const matchBusca = a.nome?.toLowerCase().includes(busca.toLowerCase());
+      const matchClasse = filtroClasse === 'Todas' || a.classe === filtroClasse || a.turma === filtroClasse;
       return matchBusca && matchClasse;
     })
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
@@ -449,7 +525,12 @@ export function Alunos() {
 
         {/* Tabela de Alunos */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          {alunosFiltrados.length > 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-12 text-gray-500 text-sm gap-2">
+              <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
+              Carregando alunos do Firestore...
+            </div>
+          ) : alunosFiltrados.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -462,56 +543,59 @@ export function Alunos() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
-                  {alunosFiltrados.map((a) => (
-                    <tr key={a.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="p-4 font-medium text-gray-900">{a.nome}</td>
-                      <td className="p-4 text-gray-600">{a.classe}</td>
-                      <td className="p-4 text-gray-600">{a.telefone || '-'}</td>
-                      <td className="p-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                          a.situacao === 'Ativo' 
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
-                            : 'bg-rose-50 text-rose-700 border-rose-100'
-                        }`}>
-                          {a.situacao}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button 
-                            onClick={() => handleAlternarStatus(a.id, a.situacao)}
-                            className={`p-2 rounded-lg transition-colors inline-flex items-center gap-1 text-xs font-medium ${
-                              a.situacao === 'Ativo' 
-                                ? 'text-amber-600 hover:bg-amber-50' 
-                                : 'text-emerald-600 hover:bg-emerald-50'
-                            }`}
-                            title={a.situacao === 'Ativo' ? 'Desativar Aluno' : 'Ativar Aluno'}
-                          >
-                            <Power className="w-4 h-4" />
-                            {a.situacao === 'Ativo' ? 'Desativar' : 'Ativar'}
-                          </button>
+                  {alunosFiltrados.map((a) => {
+                    const situacaoTexto = a.situacao || (a.ativo ? 'Ativo' : 'Inativo');
+                    return (
+                      <tr key={a.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="p-4 font-medium text-gray-900">{a.nome}</td>
+                        <td className="p-4 text-gray-600">{a.classe || a.turma || '-'}</td>
+                        <td className="p-4 text-gray-600">{a.telefone || '-'}</td>
+                        <td className="p-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                            situacaoTexto === 'Ativo' 
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                              : 'bg-rose-50 text-rose-700 border-rose-100'
+                          }`}>
+                            {situacaoTexto}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button 
+                              onClick={() => handleAlternarStatus(a.id, situacaoTexto)}
+                              className={`p-2 rounded-lg transition-colors inline-flex items-center gap-1 text-xs font-medium ${
+                                situacaoTexto === 'Ativo' 
+                                  ? 'text-amber-600 hover:bg-amber-50' 
+                                  : 'text-emerald-600 hover:bg-emerald-50'
+                              }`}
+                              title={situacaoTexto === 'Ativo' ? 'Desativar Aluno' : 'Ativar Aluno'}
+                            >
+                              <Power className="w-4 h-4" />
+                              {situacaoTexto === 'Ativo' ? 'Desativar' : 'Ativar'}
+                            </button>
 
-                          <button 
-                            onClick={() => handleEditar(a)}
-                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-flex items-center gap-1 text-xs font-medium"
-                            title="Editar Aluno"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                            Editar
-                          </button>
+                            <button 
+                              onClick={() => handleEditar(a)}
+                              className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-flex items-center gap-1 text-xs font-medium"
+                              title="Editar Aluno"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                              Editar
+                            </button>
 
-                          <button 
-                            onClick={() => handleRemover(a.id)}
-                            className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors inline-flex items-center gap-1 text-xs font-medium"
-                            title="Excluir Aluno"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Excluir
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            <button 
+                              onClick={() => handleRemover(a.id)}
+                              className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors inline-flex items-center gap-1 text-xs font-medium"
+                              title="Excluir Aluno"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Excluir
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

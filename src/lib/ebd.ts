@@ -1,14 +1,10 @@
 export interface Aluno {
   id: string;
   nome: string;
-  classe: string;
-  idade?: number;
-  situacao: 'Ativo' | 'Inativo' | 'Visitante';
-  batizado: boolean;
-  biblia: boolean;
-  revista: boolean;
-  oferta: number;
-  // Campos adicionados para o formulário completo com máscaras e endereço
+  classe?: string;
+  turma?: string;   // <-- Adicione esta linha
+  ativo?: boolean;  // <-- Adicione esta linha
+  situacao?: 'Ativo' | 'Inativo';
   telefone?: string;
   nascimento?: string;
   casamento?: string;
@@ -20,6 +16,11 @@ export interface Aluno {
   cidade?: string;
   eProfessor?: boolean;
   classeLeciona?: string;
+  batizado?: boolean;
+  biblia?: boolean;
+  revista?: boolean;
+  oferta?: number;
+  dataCadastro?: string;
 }
 
 export interface ClasseEBD {
