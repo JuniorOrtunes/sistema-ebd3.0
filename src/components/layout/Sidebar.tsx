@@ -70,7 +70,7 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
         })}
       </nav>
 
-      {/* Rodapé da Sidebar com Botão de Sair */}
+      {/* Rodapé da Sidebar com Botão de Sair e Versão */}
       <div className="p-4 border-t border-blue-900/40 space-y-3">
         <button
           onClick={onLogout}
@@ -80,7 +80,10 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
           <span>Sair do Sistema</span>
         </button>
 
-        <p className="text-[10px] text-blue-400/60 font-medium text-center">© 2026 SIBO</p>
+        <div className="flex flex-col items-center justify-center space-y-0.5">
+          <p className="text-[10px] text-blue-400/60 font-medium text-center">© 2026 SIBO</p>
+          <p className="text-[9px] text-blue-400/40 font-mono tracking-wider">v1.2.0</p>
+        </div>
       </div>
     </aside>
   );
