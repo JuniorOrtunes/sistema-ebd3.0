@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ALUNOS_INICIAIS, type Aluno } from '../../lib/ebd';
-import { UserPlus, Search, ChevronDown, Edit2, X, Calendar, MapPin, Loader2, Trash2, Power } from 'lucide-react';
+import { UserPlus, Search, ChevronDown, Edit2, X, Calendar, MapPin, Loader2, Trash2, Power, Shield } from 'lucide-react';
 import { db } from '../../firebase'; 
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
@@ -17,11 +17,12 @@ export function Alunos() {
   const [loading, setLoading] = useState(true);
   
   const [filtroClasse, setFiltroClasse] = useState('Todas');
+  const [filtroTipo, setFiltroTipo] = useState('todos'); // 'todos' | 'professores' | 'superintendentes' | 'alunos'
   const [busca, setBusca] = useState('');
 
   const [classesDisponiveis, setClassesDisponiveis] = useState<ClassItem[]>([]);
 
-  // Carregar Classes do Firestore ou localStorage (mantendo compatibilidade)
+  // Carregar Classes do Firestore ou localStorage
   useEffect(() => {
     const carregarClasses = async () => {
       try {
@@ -39,7 +40,6 @@ export function Alunos() {
         console.error('Erro ao buscar classes do Firestore:', e);
       }
 
-      // Fallback para localStorage caso não encontre no Firestore
       const savedClasses = localStorage.getItem('ebd_classes');
       if (savedClasses) {
         const parsed: ClassItem[] = JSON.parse(savedClasses);
@@ -51,31 +51,88 @@ export function Alunos() {
     carregarClasses();
   }, []);
 
-  // Carregar Alunos do Firestore
-  const carregarAlunos = async () => {
+  // Carregar Alunos e Superintendentes do Firestore com cruzamento flexível
+  const carregarDados = async () => {
     try {
       setLoading(true);
-      const querySnapshot = await getDocs(collection(db, 'alunos'));
-      if (!querySnapshot.empty) {
-        const listaAlunos = querySnapshot.docs.map(docSnap => ({
+      
+      // 1. Carregar Alunos
+      const snapshotAlunos = await getDocs(collection(db, 'alunos'));
+      let listaAlunos: Aluno[] = [];
+      if (!snapshotAlunos.empty) {
+        listaAlunos = snapshotAlunos.docs.map(docSnap => ({
           id: docSnap.id,
           ...docSnap.data()
         })) as Aluno[];
-        listaAlunos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
-        setAlunos(listaAlunos);
       } else {
-        // Se estiver vazio no Firestore, podemos carregar os iniciais ou deixar vazio
-        setAlunos(ALUNOS_INICIAIS.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })));
+        listaAlunos = [...ALUNOS_INICIAIS];
       }
+
+      // 2. Carregar Superintendentes
+      const snapshotSuper = await getDocs(collection(db, 'superintendentes'));
+      const listaSuperintendentes: { nome: string; dados: any; id: string }[] = [];
+
+      if (!snapshotSuper.empty) {
+        snapshotSuper.docs.forEach(docSup => {
+          const dadosSup = docSup.data();
+          if (dadosSup.nome) {
+            listaSuperintendentes.push({
+              id: docSup.id,
+              nome: dadosSup.nome.trim().toLowerCase(),
+              dados: dadosSup
+            });
+          }
+        });
+      }
+
+      // 3. Cruzamento inteligente por correspondência (verifica igualdade ou inclusão parcial de nomes)
+      listaAlunos = listaAlunos.map(aluno => {
+        const nomeAluno = aluno.nome?.trim().toLowerCase() || '';
+        
+        const ehSuper = listaSuperintendentes.some(sup => {
+          return nomeAluno === sup.nome || nomeAluno.includes(sup.nome) || sup.nome.includes(nomeAluno);
+        });
+
+        if (ehSuper) {
+          return { ...aluno, eSuperintendente: true };
+        }
+        return aluno;
+      });
+
+      // 4. Adicionar superintendentes que não existem na lista de alunos
+      listaSuperintendentes.forEach(sup => {
+        const jaExiste = listaAlunos.some(a => {
+          const nomeA = a.nome?.trim().toLowerCase() || '';
+          return nomeA === sup.nome || nomeA.includes(sup.nome) || sup.nome.includes(nomeA);
+        });
+
+        if (!jaExiste) {
+          listaAlunos.push({
+            id: `sup_${sup.id}`,
+            nome: sup.dados.nome,
+            classe: sup.dados.classe || 'Geral',
+            turma: sup.dados.turma || 'Geral',
+            telefone: sup.dados.telefone || '',
+            situacao: sup.dados.situacao || 'Ativo',
+            ativo: sup.dados.ativo !== false,
+            eSuperintendente: true,
+            eProfessor: sup.dados.eProfessor || false,
+          } as any);
+        }
+      });
+
+      listaAlunos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+      setAlunos(listaAlunos);
+
     } catch (e) {
-      console.error('Erro ao carregar alunos do Firestore:', e);
+      console.error('Erro ao carregar dados do Firestore:', e);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    carregarAlunos();
+    carregarDados();
   }, []);
 
   // Estados do formulário
@@ -99,7 +156,6 @@ export function Alunos() {
   const mascaraTelefone = (v: string) => v.replace(/\D/g, '').replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3').slice(0, 15);
   const mascaraCep = (v: string) => v.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2').slice(0, 9);
 
-  // Busca automática do CEP (ViaCEP)
   const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
     const cepLimpo = e.target.value.replace(/\D/g, '');
     if (cepLimpo.length !== 8) return;
@@ -121,7 +177,6 @@ export function Alunos() {
     }
   };
 
- // Salvar / Atualizar registro no Firestore
   const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nome.trim()) {
@@ -133,8 +188,10 @@ export function Alunos() {
     const dataAtual = new Date().toISOString().split('T')[0];
 
     try {
-      if (editandoId) {
-        const alunoRef = doc(db, 'alunos', editandoId);
+      const idReal = editandoId?.startsWith('sup_') ? editandoId.replace('sup_', '') : editandoId;
+
+      if (idReal && !editandoId?.startsWith('sup_')) {
+        const alunoRef = doc(db, 'alunos', idReal);
         const dadosAtualizados = {
           nome,
           turma: classeFinal,
@@ -185,7 +242,6 @@ export function Alunos() {
 
         const docRef = await addDoc(collection(db, 'alunos'), novoAlunoPayload);
         
-        // Garante que o ID gerado pelo Firestore entre corretamente no objeto do estado
         const novoAlunoComId = {
           id: docRef.id,
           ...novoAlunoPayload
@@ -198,14 +254,13 @@ export function Alunos() {
       }
 
       limparFormulario();
-      alert('Aluno salvo com sucesso!');
+      alert('Registro salvo com sucesso!');
     } catch (error) {
-      console.error('Erro ao salvar aluno no Firestore:', error);
-      alert('Erro ao salvar aluno. Verifique o console.');
+      console.error('Erro ao salvar no Firestore:', error);
+      alert('Erro ao salvar registro. Verifique o console.');
     }
   };
 
-  // Carregar dados para edição
   const handleEditar = (aluno: Aluno) => {
     setEditandoId(aluno.id);
     setNome(aluno.nome || '');
@@ -224,41 +279,39 @@ export function Alunos() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Alternar Status (Ativo / Inativo)
   const handleAlternarStatus = async (id: string, situacaoAtual: string) => {
     const novaSituacao = situacaoAtual === 'Ativo' ? 'Inativo' : 'Ativo';
     const novoAtivo = novaSituacao === 'Ativo';
 
     try {
-      const alunoRef = doc(db, 'alunos', id);
-      await updateDoc(alunoRef, { 
-        situacao: novaSituacao,
-        ativo: novoAtivo 
-      });
+      if (!id.startsWith('sup_')) {
+        const alunoRef = doc(db, 'alunos', id);
+        await updateDoc(alunoRef, { situacao: novaSituacao, ativo: novoAtivo });
+      }
 
       setAlunos(prev => 
         prev.map(a => a.id === id ? { ...a, situacao: novaSituacao as any, ativo: novoAtivo } : a)
       );
     } catch (error) {
-      console.error('Erro ao alterar status do aluno:', error);
+      console.error('Erro ao alterar status:', error);
       alert('Erro ao atualizar status.');
     }
   };
 
-  // Excluir aluno
   const handleRemover = async (id: string) => {
-    if (confirm('Tem certeza que deseja remover este aluno?')) {
+    if (confirm('Tem certeza que deseja remover este registro?')) {
       try {
-        await deleteDoc(doc(db, 'alunos', id));
+        if (!id.startsWith('sup_')) {
+          await deleteDoc(doc(db, 'alunos', id));
+        }
         setAlunos(prev => prev.filter(a => a.id !== id));
       } catch (error) {
-        console.error('Erro ao excluir aluno:', error);
-        alert('Erro ao excluir aluno.');
+        console.error('Erro ao excluir:', error);
+        alert('Erro ao excluir registro.');
       }
     }
   };
 
-  // Limpar formulário e resetar estado de edição
   const limparFormulario = () => {
     setEditandoId(null);
     setNome('');
@@ -276,12 +329,22 @@ export function Alunos() {
     setClasseLeciona('Selecione uma classe');
   };
 
-  // Filtro de lista com ordenação alfabética automática
+  // Filtro atualizado considerando as flags de superintendente e professor
   const alunosFiltrados = alunos
     .filter(a => {
       const matchBusca = a.nome?.toLowerCase().includes(busca.toLowerCase());
       const matchClasse = filtroClasse === 'Todas' || a.classe === filtroClasse || a.turma === filtroClasse;
-      return matchBusca && matchClasse;
+      
+      let matchTipo = true;
+      if (filtroTipo === 'professores') {
+        matchTipo = !!a.eProfessor;
+      } else if (filtroTipo === 'superintendentes') {
+        matchTipo = !!(a as any).eSuperintendente;
+      } else if (filtroTipo === 'alunos') {
+        matchTipo = !a.eProfessor && !(a as any).eSuperintendente;
+      }
+
+      return matchBusca && matchClasse && matchTipo;
     })
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
 
@@ -289,14 +352,12 @@ export function Alunos() {
     <div className="p-4 md:p-8 space-y-6 bg-gray-50/50 min-h-screen">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">
-          {editandoId ? 'Editar Aluno' : 'Alunos'}
+          {editandoId ? 'Editar Aluno / Cadastro' : 'Alunos e Corpo Docente'}
         </h1>
       </div>
 
       {/* Formulário de Cadastro / Edição */}
       <form onSubmit={handleSalvar} className={`bg-white p-6 rounded-2xl border shadow-sm space-y-5 transition-all ${editandoId ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-100'}`}>
-        
-        {/* Linha 1 - Identificação e Datas */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="lg:col-span-2 space-y-1">
             <label className="text-xs font-semibold text-gray-600 tracking-wider">NOME *</label>
@@ -351,7 +412,7 @@ export function Alunos() {
           </div>
         </div>
 
-        {/* Linha 2 - Telefone e Endereço Principal */}
+        {/* Demais campos de endereço e contato */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pt-2">
           <div className="space-y-1 lg:col-span-1">
             <label className="text-xs font-semibold text-gray-600 tracking-wider">TELEFONE</label>
@@ -399,7 +460,6 @@ export function Alunos() {
           </div>
         </div>
 
-        {/* Linha 3 - Complemento, Bairro e Cidade */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
           <div className="space-y-1">
             <label className="text-xs font-semibold text-gray-600 tracking-wider">COMPLEMENTO</label>
@@ -430,7 +490,6 @@ export function Alunos() {
           </div>
         </div>
 
-        {/* Linha 4 - Dados do Professor */}
         <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/70 space-y-3">
           <div className="flex items-center gap-3">
             <input 
@@ -465,7 +524,6 @@ export function Alunos() {
           )}
         </div>
 
-        {/* Botões de Ação */}
         <div className="flex items-center gap-3">
           <button 
             type="submit"
@@ -488,10 +546,12 @@ export function Alunos() {
         </div>
       </form>
 
-      {/* Seção de Filtro e Busca */}
+      {/* Filtros e Busca */}
       <div className="space-y-4 pt-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="w-full sm:w-72 space-y-1">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          
+          {/* Filtro por Classe */}
+          <div className="space-y-1">
             <label className="text-xs font-semibold text-gray-600 tracking-wider">FILTRAR POR CLASSE</label>
             <div className="relative">
               <select 
@@ -508,7 +568,26 @@ export function Alunos() {
             </div>
           </div>
 
-          <div className="w-full sm:w-72 space-y-1">
+          {/* Filtro por Tipo de Perfil */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-gray-600 tracking-wider">TIPO DE PERFIL</label>
+            <div className="relative">
+              <select 
+                value={filtroTipo}
+                onChange={e => setFiltroTipo(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white appearance-none cursor-pointer"
+              >
+                <option value="todos">Todos os cadastros</option>
+                <option value="superintendentes">Superintendência</option>
+                <option value="professores">Professores</option>
+                <option value="alunos">Alunos</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Buscar Nome */}
+          <div className="space-y-1">
             <label className="text-xs font-semibold text-gray-600 tracking-wider">BUSCAR NOME</label>
             <div className="relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -521,14 +600,15 @@ export function Alunos() {
               />
             </div>
           </div>
+
         </div>
 
-        {/* Tabela de Alunos */}
+        {/* Tabela */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-12 text-gray-500 text-sm gap-2">
               <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
-              Carregando alunos do Firestore...
+              Carregando cadastros do sistema...
             </div>
           ) : alunosFiltrados.length > 0 ? (
             <div className="overflow-x-auto">
@@ -545,9 +625,22 @@ export function Alunos() {
                 <tbody className="divide-y divide-gray-100 text-sm text-gray-700">
                   {alunosFiltrados.map((a) => {
                     const situacaoTexto = a.situacao || (a.ativo ? 'Ativo' : 'Inativo');
+                    const isSup = (a as any).eSuperintendente;
                     return (
                       <tr key={a.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="p-4 font-medium text-gray-900">{a.nome}</td>
+                        <td className="p-4 font-medium text-gray-900 flex items-center gap-2 flex-wrap">
+                          {a.nome}
+                          {isSup && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
+                              <Shield className="w-3 h-3" /> Superintendente
+                            </span>
+                          )}
+                          {a.eProfessor && !isSup && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                              Professor
+                            </span>
+                          )}
+                        </td>
                         <td className="p-4 text-gray-600">{a.classe || a.turma || '-'}</td>
                         <td className="p-4 text-gray-600">{a.telefone || '-'}</td>
                         <td className="p-4">
@@ -568,7 +661,7 @@ export function Alunos() {
                                   ? 'text-amber-600 hover:bg-amber-50' 
                                   : 'text-emerald-600 hover:bg-emerald-50'
                               }`}
-                              title={situacaoTexto === 'Ativo' ? 'Desativar Aluno' : 'Ativar Aluno'}
+                              title={situacaoTexto === 'Ativo' ? 'Desativar Registro' : 'Ativar Registro'}
                             >
                               <Power className="w-4 h-4" />
                               {situacaoTexto === 'Ativo' ? 'Desativar' : 'Ativar'}
@@ -577,7 +670,7 @@ export function Alunos() {
                             <button 
                               onClick={() => handleEditar(a)}
                               className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-flex items-center gap-1 text-xs font-medium"
-                              title="Editar Aluno"
+                              title="Editar Registro"
                             >
                               <Edit2 className="w-4 h-4" />
                               Editar
@@ -586,7 +679,7 @@ export function Alunos() {
                             <button 
                               onClick={() => handleRemover(a.id)}
                               className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors inline-flex items-center gap-1 text-xs font-medium"
-                              title="Excluir Aluno"
+                              title="Excluir Registro"
                             >
                               <Trash2 className="w-4 h-4" />
                               Excluir
@@ -601,7 +694,7 @@ export function Alunos() {
             </div>
           ) : (
             <div className="text-center py-12 text-gray-500 text-sm">
-              Nenhum aluno encontrado.
+              Nenhum registro encontrado.
             </div>
           )}
         </div>
