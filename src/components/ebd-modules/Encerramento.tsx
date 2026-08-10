@@ -1,70 +1,127 @@
 import { useState, useEffect } from 'react';
 import { Printer, Lock, CheckCircle2 } from 'lucide-react';
+import { collection, getDocs, doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebase';
+
+interface ClasseItem {
+  id: string;
+  nome: string;
+  matriculados: number;
+  presentes: number;
+  visitantes: number;
+}
 
 export function Encerramento() {
-  const [dataSelecionada, setDataSelecionada] = useState('2026-08-02');
+  const [dataSelecionada, setDataSelecionada] = useState(new Date().toISOString().split('T')[0]);
   const [ebdEncerrada, setEbdEncerrada] = useState(false);
+  const [classesEBD, setClassesEBD] = useState<ClasseItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Carrega as classes reais do localStorage (ou inicia vazio se não houver nenhuma)
-  const [classesEBD] = useState(() => {
-    const saved = localStorage.getItem('ebd_classes');
-    if (saved) {
+  useEffect(() => {
+    async function carregarBoletim() {
       try {
-        const parsed = JSON.parse(saved);
-        // Mapeia para garantir que possua as propriedades numéricas necessárias para o boletim
-        return parsed.map((c: any, index: number) => ({
-          id: c.id || String(index + 1),
-          nome: c.nome || `Classe ${index + 1}`,
-          matriculados: c.matriculados || 0,
-          presentes: c.presentes || 0,
-          visitantes: c.visitantes || 0,
-        }));
-      } catch (e) {
-        console.error('Erro ao carregar classes:', e);
+        setLoading(true);
+
+        // 1. Buscar todas as classes cadastradas no sistema
+        const classesSnap = await getDocs(collection(db, 'classes'));
+        const mapaClasses: Record<string, ClasseItem> = {};
+
+        classesSnap.docs.forEach(docSnap => {
+          const dados = docSnap.data();
+          const nomeClasse = dados.nome || docSnap.id;
+          mapaClasses[nomeClasse] = {
+            id: docSnap.id,
+            nome: nomeClasse,
+            matriculados: dados.matriculados || 0,
+            presentes: 0,
+            visitantes: 0,
+          };
+        });
+
+        // 2. Buscar TODAS as chamadas do Firestore para garantir que pegamos a data correta independentemente de formatação
+        const chamadasSnap = await getDocs(collection(db, 'chamadas'));
+
+        chamadasSnap.docs.forEach(docSnap => {
+          const dados = docSnap.data();
+          const nomeClasse = dados.classe;
+          const dataChamada = dados.data; // formato YYYY-MM-DD salvo pelo Chamada.tsx
+
+          // Compara se a data da chamada bate com a selecionada
+          if (dataChamada === dataSelecionada && nomeClasse && mapaClasses[nomeClasse]) {
+            mapaClasses[nomeClasse].presentes = dados.totalPresentesAlunos || 0;
+            mapaClasses[nomeClasse].visitantes = dados.totalVisitantes || 0;
+            if (dados.totalMatriculados !== undefined) {
+              mapaClasses[nomeClasse].matriculados = dados.totalMatriculados;
+            }
+          }
+        });
+
+        let listaConsolidada = Object.values(mapaClasses);
+        listaConsolidada.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+
+        // 3. Verificar se a EBD deste dia já foi encerrada/travada
+        const fechamentoRef = doc(db, 'ebd_fechamentos', dataSelecionada);
+        const fechamentoSnap = await getDoc(fechamentoRef);
+        
+        if (fechamentoSnap.exists()) {
+          const dadosFechamento = fechamentoSnap.data();
+          setEbdEncerrada(dadosFechamento.encerrada || false);
+          // Se quiser forçar atualizar com os dados novos mesmo se fechado, remova ou ajuste esta linha
+        } else {
+          setEbdEncerrada(false);
+        }
+
+        setClassesEBD(listaConsolidada);
+
+      } catch (error) {
+        console.error('Erro ao carregar boletim:', error);
+      } finally {
+        setLoading(false);
       }
     }
-    // Retorna vazio caso não haja classes cadastradas no sistema
-    return [];
-  });
 
-  // Persiste os dados no localStorage para o Dashboard ler
-  useEffect(() => {
-    localStorage.setItem('ebd_encerramento_dados', JSON.stringify(classesEBD));
-  }, [classesEBD]);
+    carregarBoletim();
+  }, [dataSelecionada]);
 
-  // Cálculos gerais baseados nos dados dinâmicos
-  const totalMatriculados = classesEBD.reduce((acc: number, c: any) => acc + (c.matriculados || 0), 0);
-  const totalPresentesAlunos = classesEBD.reduce((acc: number, c: any) => acc + (c.presentes || 0), 0);
-  const totalVisitantes = classesEBD.reduce((acc: number, c: any) => acc + (c.visitantes || 0), 0);
+  const totalMatriculados = classesEBD.reduce((acc, c) => acc + (c.matriculados || 0), 0);
+  const totalPresentesAlunos = classesEBD.reduce((acc, c) => acc + (c.presentes || 0), 0);
+  const totalVisitantes = classesEBD.reduce((acc, c) => acc + (c.visitantes || 0), 0);
   const totalGeralPresenca = totalPresentesAlunos + totalVisitantes;
 
   const percentualFrequencia = totalMatriculados > 0 
     ? Math.round((totalPresentesAlunos / totalMatriculados) * 100) 
     : 0;
 
-  const handleEncerrarEBD = () => {
-    if (ebdEncerrada) {
-      if (confirm('Deseja reabrir a EBD deste domingo para edições?')) {
-        setEbdEncerrada(false);
-      }
-    } else {
-      if (confirm('Tem certeza que deseja encerrar a EBD deste domingo? As chamadas dos professores serão bloqueadas para edição.')) {
-        setEbdEncerrada(true);
+  const handleEncerrarEBD = async () => {
+    const novoStatus = !ebdEncerrada;
+    const mensagem = novoStatus 
+      ? 'Tem certeza que deseja encerrar a EBD deste domingo? As chamadas serão bloqueadas para edição.' 
+      : 'Deseja reabrir a EBD deste domingo para edições?';
+
+    if (window.confirm(mensagem)) {
+      try {
+        setEbdEncerrada(novoStatus);
+
+        const docRef = doc(db, 'ebd_fechamentos', dataSelecionada);
+        await setDoc(docRef, {
+          data: dataSelecionada,
+          encerrada: novoStatus,
+          classes: classesEBD,
+          atualizadoEm: new Date().toISOString()
+        }, { merge: true });
+
+        alert(novoStatus ? 'EBD encerrada com sucesso!' : 'EBD reaberta com sucesso!');
+      } catch (error) {
+        console.error('Erro ao atualizar status:', error);
+        alert('Erro ao salvar alteração.');
       }
     }
   };
 
-  const handleImprimir = () => {
-    window.print();
-  };
-
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
-      
-      {/* HEADER / CONTROLE DE DATA E STATUS */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4 print:hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          
           <div className="flex items-center gap-4">
             <div className="space-y-1">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Domingo</label>
@@ -91,7 +148,8 @@ export function Encerramento() {
 
           <div className="flex items-center gap-3">
             <button 
-              onClick={handleImprimir}
+              type="button"
+              onClick={() => window.print()}
               className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-sm font-semibold transition-all shadow-sm flex items-center gap-2"
             >
               <Printer className="w-4 h-4 text-slate-500" />
@@ -99,6 +157,7 @@ export function Encerramento() {
             </button>
 
             <button 
+              type="button"
               onClick={handleEncerrarEBD}
               className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm flex items-center gap-2 ${
                 ebdEncerrada 
@@ -113,7 +172,6 @@ export function Encerramento() {
         </div>
       </div>
 
-      {/* BOLETIM GERAL */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 md:p-8 space-y-6">
         <div className="flex justify-between items-center border-b border-slate-100 pb-6">
           <div>
@@ -128,7 +186,9 @@ export function Encerramento() {
           </div>
         </div>
 
-        {classesEBD.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-8 text-slate-400 text-sm">Carregando dados...</div>
+        ) : classesEBD.length > 0 ? (
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 text-slate-400 text-[11px] font-bold uppercase tracking-wider">
@@ -139,8 +199,8 @@ export function Encerramento() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {classesEBD.map((cls: any) => (
-                <tr key={cls.id}>
+              {classesEBD.map((cls) => (
+                <tr key={cls.id || cls.nome}>
                   <td className="py-3.5 px-4 font-semibold text-slate-800">{cls.nome}</td>
                   <td className="py-3.5 px-4 text-center text-slate-600">{cls.matriculados}</td>
                   <td className="py-3.5 px-4 text-center text-slate-600">{cls.presentes}</td>
@@ -150,7 +210,7 @@ export function Encerramento() {
             </tbody>
           </table>
         ) : (
-          <p className="text-sm text-slate-400 italic py-4 text-center">Nenhuma classe cadastrada no sistema ainda.</p>
+          <p className="text-sm text-slate-400 italic py-4 text-center">Nenhuma classe cadastrada.</p>
         )}
 
         <p className="text-xs text-slate-500 pt-1">

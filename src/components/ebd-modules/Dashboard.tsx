@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Users, CheckSquare, UserPlus, Building2, GraduationCap, BarChart3, TrendingUp, PieChart, Activity } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart as RechartsPie, Pie, Cell } from 'recharts';
-import { type Aluno } from '../../lib/ebd';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../firebase';
 
-// --- Componente Auxiliar para Contador Animado ---
+const COLORS = ['#6366f1', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
+
 function AnimatedCounter({ value, duration = 1000 }: { value: number; duration?: number }) {
   const [count, setCount] = useState(0);
 
@@ -37,19 +39,6 @@ function AnimatedCounter({ value, duration = 1000 }: { value: number; duration?:
   return <>{count.toLocaleString('pt-BR')}</>;
 }
 
-interface ClassItem {
-  id: number | string;
-  nome: string;
-  faixaEtaria?: string;
-  sala?: string;
-  ativa?: boolean;
-  professor?: string;
-  matriculados?: number;
-  presentes?: number;
-  visitantes?: number;
-}
-
-// --- Componente Principal do Dashboard ---
 export function Dashboard() {
   const [totalAlunos, setTotalAlunos] = useState(0);
   const [totalClasses, setTotalClasses] = useState(0);
@@ -59,84 +48,109 @@ export function Dashboard() {
   const [percentualPresenca, setPercentualPresenca] = useState(0);
 
   const [presencaAulaData, setPresencaAulaData] = useState<any[]>([]);
+  const [frequenciaClasseData, setFrequenciaClasseData] = useState<any[]>([]);
+  const [distribuicaoData, setDistribuicaoData] = useState<any[]>([]);
+  const [evolucaoSemanasData, setEvolucaoSemanasData] = useState<any[]>([]);
 
-  // Carrega e calcula os dados dinamicamente do localStorage
   useEffect(() => {
-    // 1. Alunos Ativos
-    const savedAlunos = localStorage.getItem('ebd_alunos');
-    let listaAlunos: Aluno[] = [];
-    if (savedAlunos) {
-      try {
-        listaAlunos = JSON.parse(savedAlunos);
-      } catch (e) {
-        console.error('Erro ao ler alunos:', e);
-      }
-    }
-    const ativos = listaAlunos.filter(a => !a.situacao || a.situacao === 'Ativo').length;
-    setTotalAlunos(ativos);
+    // 1. Sincronização em tempo real de Alunos
+    const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
+      const listaAlunos = snapshot.docs.map(doc => doc.data());
+      const ativos = listaAlunos.filter(a => !a.situacao || a.situacao === 'Ativo' || a.ativo === true).length;
+      setTotalAlunos(ativos);
 
-    // 2. Professores baseados nos alunos
-    const profsNosAlunos = listaAlunos.filter(a => a.eProfessor).length;
-    setTotalProfessores(profsNosAlunos);
+      const profsNosAlunos = listaAlunos.filter(a => a.eProfessor).length;
+      setTotalProfessores(profsNosAlunos);
 
-    // 2.1. Contagem correta de Aulas/Classes Ativas (busca do cadastro oficial de turmas ou filtra por ativa === true)
-    const savedClasses = localStorage.getItem('ebd_classes') || localStorage.getItem('ebd_turmas');
-    if (savedClasses) {
-      try {
-        const listaClasses: ClassItem[] = JSON.parse(savedClasses);
-        const classesAtivas = listaClasses.filter(c => c.ativa !== false);
-        setTotalClasses(classesAtivas.length);
-      } catch (e) {
-        setTotalClasses(0);
-      }
-    } else {
-      setTotalClasses(0);
-    }
+      // Distribuição de Alunos por Classe (Gráfico de Pizza)
+      const contagemClasses: Record<string, number> = {};
+      listaAlunos.forEach((aluno: any) => {
+        const nomeClasse = aluno.classe || 'Não definida';
+        contagemClasses[nomeClasse] = (contagemClasses[nomeClasse] || 0) + 1;
+      });
 
-    // 3. Dados de Encerramento (Presentes, Visitantes e Gráficos da última sessão)
-    const savedEncerramento = localStorage.getItem('ebd_encerramento_dados');
-    if (savedEncerramento) {
-      try {
-        const dadosEncerramento: ClassItem[] = JSON.parse(savedEncerramento);
+      const pieData = Object.keys(contagemClasses).map((nome, index) => ({
+        name: nome,
+        value: contagemClasses[nome],
+        color: COLORS[index % COLORS.length]
+      }));
+      setDistribuicaoData(pieData);
+    });
 
-        let sumPresentes = 0;
-        let sumVisitantes = 0;
-        let sumMatriculados = 0;
-        
-        const chartData = dadosEncerramento.map(cls => {
-          const presentes = cls.presentes || 0;
-          const visitantes = cls.visitantes || 0;
-          const matriculados = cls.matriculados || 0;
-          
-          sumPresentes += presentes;
-          sumVisitantes += visitantes;
-          sumMatriculados += matriculados;
+    // 2. Sincronização em tempo real de Classes
+    const unsubClasses = onSnapshot(collection(db, 'classes'), (snapshot) => {
+      const listaClasses = snapshot.docs.map(doc => doc.data());
+      const classesAtivasCount = listaClasses.filter(c => c.ativa !== false).length;
+      setTotalClasses(classesAtivasCount);
+    });
 
-          const taxa = matriculados > 0 ? Math.round((presentes / matriculados) * 100) : 0;
+    // 3. Sincronização em tempo real de Chamadas (Gráficos de Frequência e Presença)
+    const unsubChamadas = onSnapshot(collection(db, 'chamadas'), (snapshot) => {
+      const listaChamadas = snapshot.docs.map(doc => doc.data());
 
-          return {
-            aula: cls.nome,
-            presenca: taxa,
-            total: presentes + visitantes
-          };
-        });
+      let sumPresentes = 0;
+      let sumVisitantes = 0;
+      let sumMatriculados = 0;
 
-        setTotalPresentes(sumPresentes);
-        setTotalVisitantes(sumVisitantes);
+      // Gráfico de Barras: % Presença por Aula/Registro de Chamada
+      const chartData = listaChamadas.map((cls: any) => {
+        const presentes = cls.totalPresentesAlunos || 0;
+        const visitantes = cls.totalVisitantes || 0;
+        const matriculados = cls.totalMatriculados || 0;
 
-        const geral = sumMatriculados > 0 ? Math.round((sumPresentes / sumMatriculados) * 100) : 0;
-        setPercentualPresenca(geral);
+        sumPresentes += presentes;
+        sumVisitantes += visitantes;
+        sumMatriculados += matriculados;
 
-        setPresencaAulaData(chartData);
-      } catch (e) {
-        console.error('Erro ao ler dados de encerramento:', e);
-      }
-    } else {
-      setTotalPresentes(0);
-      setTotalVisitantes(0);
-      setPercentualPresenca(0);
-      setPresencaAulaData([]);
-    }
+        const taxa = matriculados > 0 ? Math.round((presentes / matriculados) * 100) : 0;
+
+        return {
+          aula: cls.classe || 'Classe',
+          presenca: taxa,
+          total: presentes + visitantes
+        };
+      });
+
+      setTotalPresentes(sumPresentes);
+      setTotalVisitantes(sumVisitantes);
+
+      const geral = sumMatriculados > 0 ? Math.round((sumPresentes / sumMatriculados) * 100) : 0;
+      setPercentualPresenca(geral);
+      setPresencaAulaData(chartData);
+
+      // Gráfico de Linha: Frequência acumulada por Classe
+      const freqClasseMap = listaChamadas.reduce((acc: any, curr: any) => {
+        const nomeClasse = curr.classe || 'Classe Geral';
+        const totalAlunosPresentes = (curr.totalPresentesAlunos || 0) + (curr.totalVisitantes || 0);
+        acc[nomeClasse] = (acc[nomeClasse] || 0) + totalAlunosPresentes;
+        return acc;
+      }, {});
+
+      const freqClasseArray = Object.keys(freqClasseMap).map(classe => ({
+        classe: classe,
+        frequencia: freqClasseMap[classe]
+      }));
+      setFrequenciaClasseData(freqClasseArray);
+
+      // Gráfico de Linha: Evolução Temporal de Frequência
+      const evolucaoMap = listaChamadas.reduce((acc: any, curr: any) => {
+        const data = curr.data || 'Data';
+        acc[data] = (acc[data] || 0) + (curr.totalPresentesAlunos || 0) + (curr.totalVisitantes || 0);
+        return acc;
+      }, {});
+
+      const evolucaoArray = Object.keys(evolucaoMap).map(data => ({
+        semana: data.split('-').reverse().slice(0, 2).join('/'),
+        frequencia: evolucaoMap[data]
+      }));
+      setEvolucaoSemanasData(evolucaoArray);
+    });
+
+    return () => {
+      unsubAlunos();
+      unsubClasses();
+      unsubChamadas();
+    };
   }, []);
 
   const stats = [
@@ -148,13 +162,8 @@ export function Dashboard() {
     { label: 'PRESENÇA GERAL', value: percentualPresenca, icon: BarChart3, color: 'text-cyan-600', bg: 'bg-cyan-50', isPercentage: true },
   ];
 
-  const frequenciaClasseData: any[] = [];
-  const distribuicaoData: any[] = [];
-  const evolucaoSemanasData: any[] = [];
-
   return (
     <div className="space-y-6 pb-10">
-      {/* Grid Superior de Cards Estatísticos */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
@@ -181,24 +190,22 @@ export function Dashboard() {
         })}
       </div>
 
-      {/* Grid de Gráficos Reais com Recharts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* 1. Frequência por Classe */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-blue-950" />
-              Frequência por Classe — mês atual
+              Frequência por Classe
             </h3>
           </div>
           <div className="h-64 w-full flex items-center justify-center">
             {frequenciaClasseData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={frequenciaClasseData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="dia" stroke="#94a3b8" fontSize={12} />
+                  <XAxis dataKey="classe" stroke="#94a3b8" fontSize={11} />
                   <YAxis stroke="#94a3b8" fontSize={12} />
                   <Tooltip />
+                  <Line type="monotone" dataKey="frequencia" name="Total Presenças" stroke="#3b82f6" strokeWidth={3} dot={{ r: 5 }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -207,12 +214,11 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* 2. Distribuição por Faixa Etária */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
               <PieChart className="w-4 h-4 text-blue-950" />
-              Distribuição por Categoria — última sessão
+              Alunos por Classe
             </h3>
           </div>
           <div className="h-64 w-full flex items-center justify-center">
@@ -237,17 +243,16 @@ export function Dashboard() {
                 </RechartsPie>
               </ResponsiveContainer>
             ) : (
-              <p className="text-xs text-slate-400">Nenhum dado registrado ainda.</p>
+              <p className="text-xs text-slate-400">Nenhum aluno cadastrado em classes ainda.</p>
             )}
           </div>
         </div>
 
-        {/* 3. % Presença por Aula */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
               <Activity className="w-4 h-4 text-blue-950" />
-              % Presença por aula — última sessão
+              % Presença por Aula
             </h3>
           </div>
           <div className="h-64 w-full flex items-center justify-center">
@@ -261,17 +266,16 @@ export function Dashboard() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-xs text-slate-400">Nenhum dado registrado ainda.</p>
+              <p className="text-xs text-slate-400">Nenhum dado de chamada salvo ainda.</p>
             )}
           </div>
         </div>
 
-        {/* 4. Evolução de Frequência */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-blue-950" />
-              Evolução de Frequência — últimas semanas
+              Evolução de Frequência
             </h3>
           </div>
           <div className="h-64 w-full flex items-center justify-center">
@@ -289,7 +293,6 @@ export function Dashboard() {
             )}
           </div>
         </div>
-
       </div>
     </div>
   );

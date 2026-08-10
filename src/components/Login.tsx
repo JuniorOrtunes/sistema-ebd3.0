@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldCheck, UserCheck, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
 import type { Superintendente } from '../lib/ebd';
 
 interface LoginProps {
@@ -8,21 +10,46 @@ interface LoginProps {
   superintendentes?: Superintendente[];
 }
 
+interface ClasseItem {
+  id: string;
+  nome: string;
+}
+
 export default function Login({ onLoginProfessor, onLoginSuperintendencia, superintendentes = [] }: LoginProps) {
   const [classeSelecionada, setClasseSelecionada] = useState('');
   const [mostrarFormSuper, setMostrarFormSuper] = useState(false);
   
-  // Campos de login da superintendência limpos
+  // Campos de login da superintendência
   const [usuarioSuper, setUsuarioSuper] = useState('');
   const [senhaSuper, setSenhaSuper] = useState('');
   const [mostrarSenhaSuper, setMostrarSenhaSuper] = useState(false);
 
-  // Lista mockada de classes para o professor
-  const classesMock = [
-    { id: '1', nome: 'Simeão' },
-    { id: '2', nome: 'Adultos' },
-    { id: '3', nome: 'Jovens' },
-  ];
+  // Lista dinâmica de classes vindas do Firestore
+  const [classesList, setClassesList] = useState<ClasseItem[]>([]);
+  const [loadingClasses, setLoadingClasses] = useState(true);
+
+  // Carregar as classes cadastradas no Firestore ao abrir o login
+  useEffect(() => {
+    async function carregarClasses() {
+      try {
+        setLoadingClasses(true);
+        const querySnapshot = await getDocs(collection(db, 'classes'));
+        const lista: ClasseItem[] = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          nome: doc.data().nome || 'Classe Sem Nome'
+        }));
+
+        lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+        setClassesList(lista);
+      } catch (error) {
+        console.error('Erro ao carregar classes para o login:', error);
+      } finally {
+        setLoadingClasses(false);
+      }
+    }
+
+    carregarClasses();
+  }, []);
 
   const handleEntrarChamada = () => {
     if (!classeSelecionada) {
@@ -40,17 +67,20 @@ export default function Login({ onLoginProfessor, onLoginSuperintendencia, super
     }
     
     const usuarioLimpo = usuarioSuper.trim().toLowerCase();
+    const senhaLimpa = senhaSuper.trim();
 
-    // Validação estrita baseada na lista real de superintendentes cadastrados
+    // Validação baseada na lista real de superintendentes (props ou fallback padrão)
     const listaAtiva = superintendentes.length > 0 
       ? superintendentes 
       : [
-          { usuario: 'ortunes', ativo: true },
-          { usuario: 'teste', ativo: true }
+          { usuario: 'ortunes', senha: '123', ativo: true },
+          { usuario: 'teste', senha: '123', ativo: true }
         ];
 
     const superintendenteEncontrado = listaAtiva.find(
-      s => s.usuario.toLowerCase() === usuarioLimpo && s.ativo !== false
+      s => s.usuario.toLowerCase() === usuarioLimpo && 
+           (s.senha ? s.senha === senhaLimpa : true) && 
+           s.ativo !== false
     );
 
     if (superintendenteEncontrado) {
@@ -99,10 +129,11 @@ export default function Login({ onLoginProfessor, onLoginSuperintendencia, super
               <select
                 value={classeSelecionada}
                 onChange={(e) => setClasseSelecionada(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 transition-all"
+                disabled={loadingClasses}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 transition-all disabled:opacity-60"
               >
-                <option value="">Escolher classe...</option>
-                {classesMock.map((c) => (
+                <option value="">{loadingClasses ? 'Carregando classes...' : 'Escolher classe...'}</option>
+                {classesList.map((c) => (
                   <option key={c.id} value={c.nome}>
                     {c.nome}
                   </option>
@@ -111,6 +142,7 @@ export default function Login({ onLoginProfessor, onLoginSuperintendencia, super
             </div>
 
             <button
+              type="button"
               onClick={handleEntrarChamada}
               className="w-full py-3.5 bg-blue-950 text-white rounded-xl text-sm font-semibold hover:bg-blue-900 transition-all shadow-lg shadow-blue-950/20 flex items-center justify-center gap-2 group"
             >
@@ -135,6 +167,7 @@ export default function Login({ onLoginProfessor, onLoginSuperintendencia, super
           {!mostrarFormSuper ? (
             <div className="mt-5">
               <button
+                type="button"
                 onClick={() => setMostrarFormSuper(true)}
                 className="w-full py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-all border border-slate-200/60 shadow-sm"
               >

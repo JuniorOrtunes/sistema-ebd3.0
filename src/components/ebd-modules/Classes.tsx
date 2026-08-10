@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Building2, Plus, Edit3, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { collection, getDocs, addDoc, updateDoc as updateDocFn, deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 interface ClassItem {
-  id: number;
+  id: string;
   nome: string;
   faixaEtaria: string;
   sala: string;
@@ -10,52 +12,78 @@ interface ClassItem {
 }
 
 export function ClassesModule() {
-  // Carrega as classes e já ordena em ordem alfabética
-  const [classes, setClasses] = useState<ClassItem[]>(() => {
-    const savedClasses = localStorage.getItem('ebd_classes');
-    if (!savedClasses) return [];
-    const parsed: ClassItem[] = JSON.parse(savedClasses);
-    return parsed.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
-  });
-
+  const [classes, setClasses] = useState<ClassItem[]>([]);
   const [nome, setNome] = useState('');
   const [faixaEtaria, setFaixaEtaria] = useState('');
   const [sala, setSala] = useState('');
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Salva no navegador mantendo sempre a ordem alfabética
+  // Carregar do Firestore ao montar o componente
   useEffect(() => {
-    const classesOrdenadas = [...classes].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
-    localStorage.setItem('ebd_classes', JSON.stringify(classesOrdenadas));
-  }, [classes]);
+    async function carregarClasses() {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'classes'));
+        const lista: ClassItem[] = querySnapshot.docs.map(docSnapshot => ({
+          id: docSnapshot.id,
+          ...(docSnapshot.data() as Omit<ClassItem, 'id'>)
+        }));
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nome.trim() || !faixaEtaria.trim() || !sala.trim()) return;
-
-    let novasClasses: ClassItem[];
-
-    if (editingId !== null) {
-      novasClasses = classes.map(c => c.id === editingId ? { ...c, nome, faixaEtaria, sala } : c);
-      setEditingId(null);
-    } else {
-      const novaClasse: ClassItem = {
-        id: Date.now(),
-        nome,
-        faixaEtaria,
-        sala,
-        ativa: true,
-      };
-      novasClasses = [...classes, novaClasse];
+        lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+        setClasses(lista);
+      } catch (error) {
+        console.error('Erro ao carregar classes do Firestore:', error);
+      }
     }
 
-    // Ordena imediatamente ao salvar/atualizar
-    novasClasses.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
-    setClasses(novasClasses);
+    carregarClasses();
+  }, []);
 
-    setNome('');
-    setFaixaEtaria('');
-    setSala('');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nome.trim() || !faixaEtaria.trim() || !sala.trim()) {
+      alert('Preencha todos os campos da classe.');
+      return;
+    }
+
+    try {
+      if (editingId !== null) {
+        const classeRef = doc(db, 'classes', editingId);
+        const dadosAtualizados = { nome, faixaEtaria, sala };
+
+        await updateDocFn(classeRef, dadosAtualizados);
+
+        setClasses(prev =>
+          prev.map(c => c.id === editingId ? { ...c, ...dadosAtualizados } : c)
+              .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }))
+        );
+        setEditingId(null);
+      } else {
+        const novaClassePayload = {
+          nome,
+          faixaEtaria,
+          sala,
+          ativa: true
+        };
+
+        const docRef = await addDoc(collection(db, 'classes'), novaClassePayload);
+        const novaClasseComId: ClassItem = {
+          id: docRef.id,
+          ...novaClassePayload
+        };
+
+        setClasses(prev =>
+          [...prev, novaClasseComId]
+            .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }))
+        );
+      }
+
+      setNome('');
+      setFaixaEtaria('');
+      setSala('');
+    } catch (error) {
+      console.error('Erro ao salvar classe no Firestore:', error);
+      alert('Erro ao salvar classe. Verifique o console.');
+    }
   };
 
   const handleEdit = (item: ClassItem) => {
@@ -65,28 +93,42 @@ export function ClassesModule() {
     setEditingId(item.id);
   };
 
-  const toggleStatus = (id: number) => {
-    const novasClasses = classes.map(c => c.id === id ? { ...c, ativa: !c.ativa } : c);
-    novasClasses.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
-    setClasses(novasClasses);
+  const toggleStatus = async (item: ClassItem) => {
+    try {
+      const novoStatus = !item.ativa;
+      const classeRef = doc(db, 'classes', item.id);
+      await updateDocFn(classeRef, { ativa: novoStatus });
+
+      setClasses(prev =>
+        prev.map(c => c.id === item.id ? { ...c, ativa: novoStatus } : c)
+            .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }))
+      );
+    } catch (error) {
+      console.error('Erro ao alternar status da classe:', error);
+      alert('Erro ao atualizar status.');
+    }
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: string) => {
     const classeParaExcluir = classes.find(c => c.id === id);
     const nomeClasse = classeParaExcluir ? classeParaExcluir.nome : 'esta classe';
 
     const confirmado = window.confirm(`Tem certeza que deseja excluir a classe "${nomeClasse}"? Esta ação não poderá ser desfeita.`);
 
     if (confirmado) {
-      const novasClasses = classes.filter(c => c.id !== id);
-      novasClasses.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
-      setClasses(novasClasses);
-      
-      if (editingId === id) {
-        setEditingId(null);
-        setNome('');
-        setFaixaEtaria('');
-        setSala('');
+      try {
+        await deleteDoc(doc(db, 'classes', id));
+        setClasses(prev => prev.filter(c => c.id !== id));
+
+        if (editingId === id) {
+          setEditingId(null);
+          setNome('');
+          setFaixaEtaria('');
+          setSala('');
+        }
+      } catch (error) {
+        console.error('Erro ao excluir classe:', error);
+        alert('Erro ao excluir classe do Firestore.');
       }
     }
   };
@@ -183,7 +225,7 @@ export function ClassesModule() {
 
                   <button 
                     type="button"
-                    onClick={() => toggleStatus(item.id)}
+                    onClick={() => toggleStatus(item)}
                     className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
                       item.ativa 
                         ? 'border-amber-200 text-amber-700 hover:bg-amber-50' 
