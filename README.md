@@ -1,32 +1,38 @@
-# React + TypeScript + Vite
+# Sistema EBD (Escola Bíblica Dominical)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Sistema de gestão educacional e administrativa desenvolvido para o acompanhamento de frequência, cadastro de alunos, turmas e relatórios de desempenho em tempo real.
 
-Currently, two official plugins are available:
+## 🚀 Tecnologias Utilizadas
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Este projeto foi construído utilizando tecnologias modernas de desenvolvimento web:
 
-## React Compiler
+* **React** + **Vite**: Para alta performance e interface reativa baseada em componentes.
+* **TypeScript**: Garantindo tipagem estática e segurança no desenvolvimento.
+* **Tailwind CSS**: Estilização moderna, responsiva e padronizada.
+* **Firebase Firestore**: Banco de dados NoSQL em nuvem com sincronização bidirecional em tempo real (`onSnapshot`).
+* **Recharts**: Biblioteca de gráficos interativos para exibição de métricas e evolução de frequência.
+* **Lucide React**: Ícones limpos e modernos para a interface.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the Oxlint configuration
+## ✨ Funcionalidades Principais
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+* **Dashboard em Tempo Real (`Realtime`)**: Sincronização automática de métricas cruciais (Alunos Matriculados, Presentes Hoje, Visitantes, Classes Ativas, Professores e Percentual de Presença).
+* **Gráficos Dinâmicos**: 
+  * Distribuição e proporção de alunos por classe.
+  * Acompanhamento de frequência por turma.
+  * Histórico e evolução temporal das chamadas.
+  * Percentual de presença por aula.
+* **Módulo de Chamadas**: Lançamento rápido de presenças, faltas e visitantes por classe.
+* **Módulo de Classes e Alunos**: Gestão completa de cadastros e status de frequência.
+* **Módulo de Encerramento e Comparativos**: Fechamento de ciclos de aulas e relatórios consolidados.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
+---
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## ⚙️ Pré-requisitos e Instalação
+
+Antes de começar, certifique-se de ter o **Node.js** instalado em sua máquina.
+
+1. Clone o repositório:
+   ```bash
+   git clone [https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git](https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git)
