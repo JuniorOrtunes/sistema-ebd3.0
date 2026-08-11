@@ -53,9 +53,6 @@ export function Dashboard() {
   const [evolucaoSemanasData, setEvolucaoSemanasData] = useState<any[]>([]);
 
   useEffect(() => {
-    // Data de hoje formatada no padrão YYYY-MM-DD salvo pelo sistema
-    const dataHoje = new Date().toISOString().split('T')[0];
-
     // 1. Sincronização em tempo real de Alunos
     const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => doc.data());
@@ -90,26 +87,37 @@ export function Dashboard() {
     const unsubChamadas = onSnapshot(collection(db, 'chamadas'), (snapshot) => {
       const listaChamadas = snapshot.docs.map(doc => doc.data());
 
-      // FILTRA APENAS AS CHAMADAS DO DIA DE HOJE PARA OS CARDS DO TOPO
-      const chamadasHoje = listaChamadas.filter((cls: any) => cls.data === dataHoje);
+      if (listaChamadas.length > 0) {
+        // Descobre qual é a data mais recente cadastrada no banco de dados
+        const datasUnicas = Array.from(new Set(listaChamadas.map((c: any) => c.data))).filter(Boolean) as string[];
+        datasUnicas.sort().reverse(); // Ordena da mais recente para a mais antiga
+        const ultimaData = datasUnicas[0]; // Pega a última data com aula registrada
 
-      let sumPresentesHoje = 0;
-      let sumVisitantesHoje = 0;
-      let sumMatriculadosHoje = 0;
+        // Filtra apenas as chamadas dessa última data para os cards do topo
+        const chamadasUltimaAula = listaChamadas.filter((cls: any) => cls.data === ultimaData);
 
-      chamadasHoje.forEach((cls: any) => {
-        sumPresentesHoje += cls.totalPresentesAlunos || 0;
-        sumVisitantesHoje += cls.totalVisitantes || 0;
-        sumMatriculadosHoje += cls.totalMatriculados || 0;
-      });
+        let sumPresentesUltima = 0;
+        let sumVisitantesUltima = 0;
+        let sumMatriculadosUltima = 0;
 
-      setTotalPresentes(sumPresentesHoje);
-      setTotalVisitantes(sumVisitantesHoje);
+        chamadasUltimaAula.forEach((cls: any) => {
+          sumPresentesUltima += cls.totalPresentesAlunos || 0;
+          sumVisitantesUltima += cls.totalVisitantes || 0;
+          sumMatriculadosUltima += cls.totalMatriculados || 0;
+        });
 
-      const geralHoje = sumMatriculadosHoje > 0 ? Math.round((sumPresentesHoje / sumMatriculadosHoje) * 100) : 0;
-      setPercentualPresenca(geralHoje);
+        setTotalPresentes(sumPresentesUltima);
+        setTotalVisitantes(sumVisitantesUltima);
 
-      // GRÁFICOS: Usam o histórico completo (listaChamadas) para manter as estatísticas e evoluções temporais corretas
+        const geralUltima = sumMatriculadosUltima > 0 ? Math.round((sumPresentesUltima / sumMatriculadosUltima) * 100) : 0;
+        setPercentualPresenca(geralUltima);
+      } else {
+        setTotalPresentes(0);
+        setTotalVisitantes(0);
+        setPercentualPresenca(0);
+      }
+
+      // GRÁFICOS: Mantêm o histórico completo para análise
       const chartData = listaChamadas.map((cls: any) => {
         const presentes = cls.totalPresentesAlunos || 0;
         const visitantes = cls.totalVisitantes || 0;
@@ -159,7 +167,7 @@ export function Dashboard() {
 
   const stats = [
     { label: 'ALUNOS MATRICULADOS', value: totalAlunos, icon: GraduationCap, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { label: 'PRESENTES HOJE', value: totalPresentes, icon: CheckSquare, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'PRESENTES NA ÚLTIMA AULA', value: totalPresentes, icon: CheckSquare, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'VISITANTES', value: totalVisitantes, icon: UserPlus, color: 'text-amber-600', bg: 'bg-amber-50' },
     { label: 'CLASSES ATIVAS', value: totalClasses, icon: Building2, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'PROFESSORES', value: totalProfessores, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
