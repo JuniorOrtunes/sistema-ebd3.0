@@ -89,7 +89,7 @@ export function Dashboard() {
         datasUnicas.sort().reverse();
         const ultimaData = datasUnicas[0];
 
-        const chamadasUltimaAula = listaChamadas.map(doc => doc).filter((cls: any) => cls.data === ultimaData);
+        const chamadasUltimaAula = listaChamadas.filter((cls: any) => cls.data === ultimaData);
 
         let sumPresentesUltima = 0;
         let sumVisitantesUltima = 0;
@@ -104,8 +104,9 @@ export function Dashboard() {
         setTotalPresentes(sumPresentesUltima);
         setTotalVisitantes(sumVisitantesUltima);
 
-        // CORREÇÃO: Cálculo correto baseado no total consolidado da última aula
+        // CORREÇÃO: Presença geral calcula estritamente Alunos Presentes / Alunos Matriculados
         const geralUltima = sumMatriculadosUltima > 0 ? Math.round((sumPresentesUltima / sumMatriculadosUltima) * 100) : 0;
+        
         setPercentualPresenca(geralUltima);
       } else {
         setTotalPresentes(0);
@@ -115,8 +116,8 @@ export function Dashboard() {
 
       const chartData = listaChamadas.map((cls: any) => {
         const presentes = cls.totalPresentesAlunos || 0;
-        const visitantes = cls.totalVisitantes || 0;
         const matriculados = cls.totalMatriculados || 0;
+        const visitantes = cls.totalVisitantes || 0;
         const taxa = matriculados > 0 ? Math.round((presentes / matriculados) * 100) : 0;
 
         return {
