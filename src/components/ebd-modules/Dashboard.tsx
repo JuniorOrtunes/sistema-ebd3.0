@@ -104,9 +104,8 @@ export function Dashboard() {
         setTotalPresentes(sumPresentesUltima);
         setTotalVisitantes(sumVisitantesUltima);
 
-        // CORREÇÃO: Presença geral calcula estritamente Alunos Presentes / Alunos Matriculados
+        // CORREÇÃO ROBUSTA: Calcula a porcentagem geral consolidando a última aula inteira
         const geralUltima = sumMatriculadosUltima > 0 ? Math.round((sumPresentesUltima / sumMatriculadosUltima) * 100) : 0;
-        
         setPercentualPresenca(geralUltima);
       } else {
         setTotalPresentes(0);
