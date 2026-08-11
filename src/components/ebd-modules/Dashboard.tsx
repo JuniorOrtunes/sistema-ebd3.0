@@ -53,7 +53,6 @@ export function Dashboard() {
   const [evolucaoSemanasData, setEvolucaoSemanasData] = useState<any[]>([]);
 
   useEffect(() => {
-    // 1. Sincronização em tempo real de Alunos
     const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => doc.data());
       const ativos = listaAlunos.filter(a => !a.situacao || a.situacao === 'Ativo' || a.ativo === true).length;
@@ -76,25 +75,21 @@ export function Dashboard() {
       setDistribuicaoData(pieData);
     });
 
-    // 2. Sincronização em tempo real de Classes
     const unsubClasses = onSnapshot(collection(db, 'classes'), (snapshot) => {
       const listaClasses = snapshot.docs.map(doc => doc.data());
       const classesAtivasCount = listaClasses.filter(c => c.ativa !== false).length;
       setTotalClasses(classesAtivasCount);
     });
 
-    // 3. Sincronização em tempo real de Chamadas
     const unsubChamadas = onSnapshot(collection(db, 'chamadas'), (snapshot) => {
       const listaChamadas = snapshot.docs.map(doc => doc.data());
 
       if (listaChamadas.length > 0) {
-        // Descobre qual é a data mais recente cadastrada no banco de dados
         const datasUnicas = Array.from(new Set(listaChamadas.map((c: any) => c.data))).filter(Boolean) as string[];
-        datasUnicas.sort().reverse(); // Ordena da mais recente para a mais antiga
-        const ultimaData = datasUnicas[0]; // Pega a última data com aula registrada
+        datasUnicas.sort().reverse();
+        const ultimaData = datasUnicas[0];
 
-        // Filtra apenas as chamadas dessa última data para os cards do topo
-        const chamadasUltimaAula = listaChamadas.filter((cls: any) => cls.data === ultimaData);
+        const chamadasUltimaAula = listaChamadas.map(doc => doc).filter((cls: any) => cls.data === ultimaData);
 
         let sumPresentesUltima = 0;
         let sumVisitantesUltima = 0;
@@ -109,6 +104,7 @@ export function Dashboard() {
         setTotalPresentes(sumPresentesUltima);
         setTotalVisitantes(sumVisitantesUltima);
 
+        // CORREÇÃO: Cálculo correto baseado no total consolidado da última aula
         const geralUltima = sumMatriculadosUltima > 0 ? Math.round((sumPresentesUltima / sumMatriculadosUltima) * 100) : 0;
         setPercentualPresenca(geralUltima);
       } else {
@@ -117,7 +113,6 @@ export function Dashboard() {
         setPercentualPresenca(0);
       }
 
-      // GRÁFICOS: Mantêm o histórico completo para análise
       const chartData = listaChamadas.map((cls: any) => {
         const presentes = cls.totalPresentesAlunos || 0;
         const visitantes = cls.totalVisitantes || 0;
