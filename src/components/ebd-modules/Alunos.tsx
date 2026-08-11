@@ -188,10 +188,10 @@ export function Alunos() {
     const dataAtual = new Date().toISOString().split('T')[0];
 
     try {
-      const idReal = editandoId?.startsWith('sup_') ? editandoId.replace('sup_', '') : editandoId;
+      const isEditando = editandoId !== null && !editandoId.startsWith('sup_');
 
-      if (idReal && !editandoId?.startsWith('sup_')) {
-        const alunoRef = doc(db, 'alunos', idReal);
+      if (isEditando) {
+        const alunoRef = doc(db, 'alunos', editandoId as string);
         const dadosAtualizados = {
           nome,
           turma: classeFinal,
@@ -215,6 +215,7 @@ export function Alunos() {
           prev.map(a => a.id === editandoId ? { ...a, ...dadosAtualizados } : a)
               .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }))
         );
+        alert('Registro atualizado com sucesso!');
       } else {
         const novoAlunoPayload = {
           nome,
@@ -233,11 +234,7 @@ export function Alunos() {
           bairro,
           cidade,
           eProfessor,
-          classeLeciona: eProfessor ? classeLeciona : '',
-          batizado: true,
-          biblia: true,
-          revista: true,
-          oferta: 0
+          classeLeciona: eProfessor ? classeLeciona : ''
         };
 
         const docRef = await addDoc(collection(db, 'alunos'), novoAlunoPayload);
@@ -251,10 +248,10 @@ export function Alunos() {
           [...prev, novoAlunoComId]
             .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }))
         );
+        alert('Registro criado com sucesso!');
       }
 
       limparFormulario();
-      alert('Registro salvo com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar no Firestore:', error);
       alert('Erro ao salvar registro. Verifique o console.');
