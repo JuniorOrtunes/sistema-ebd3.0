@@ -35,4 +35,4 @@ Antes de começar, certifique-se de ter o **Node.js** instalado em sua máquina.
 
 1. Clone o repositório:
    ```bash
-   git clone [https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git](https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git)
+   git clone https://github.com/JuniorOrtunes/sistema-ebd3.0.git

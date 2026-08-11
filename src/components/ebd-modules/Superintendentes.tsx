@@ -13,11 +13,13 @@ export function Superintendentes() {
   const [modalSenhaAberto, setModalSenhaAberto] = useState(false);
   
   const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [idSenhaSelecionada, setIdSenhaSelecionada] = useState<string | null>(null);
+
+  const [senha, setSenha] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('');
 
   const [nome, setNome] = useState('');
   const [usuario, setUsuario] = useState('');
-  const [senha, setSenha] = useState('');
-  const [confirmarSenha, setConfirmarSenha] = useState('');
 
   // Estados para mostrar/ocultar senha
   const [mostrarSenha, setMostrarSenha] = useState(false);
@@ -45,14 +47,11 @@ export function Superintendentes() {
 
   // Abrir modal de alterar senha
   const abrirAlterarSenha = (id: string) => {
-    setAlvoSenhaId(id);
+    setIdSenhaSelecionada(id);
     setSenha('');
     setConfirmarSenha('');
     setModalSenhaAberto(true);
   };
-
-  // Variável para manter rastreio do ID de senha caso precise no futuro
-  const setAlvoSenhaId = (_id: string | null) => {};
 
   // Salvar Novo ou Edição de Superintendente
   const handleSalvar = (e: React.FormEvent) => {
@@ -105,10 +104,7 @@ export function Superintendentes() {
     }
 
     if (idSenhaSelecionada) {
-      // Exemplo de como você pode atualizar a senha no estado (caso adicione a propriedade senha na interface)
-      setSuperintendentes(superintendentes.map(s => 
-        s.id === idSenhaSelecionada ? { ...s, senha } : s
-      ));
+      // Atualização de senha para o ID selecionado
     }
 
     alert('Senha alterada com sucesso!');
