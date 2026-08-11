@@ -53,6 +53,9 @@ export function Dashboard() {
   const [evolucaoSemanasData, setEvolucaoSemanasData] = useState<any[]>([]);
 
   useEffect(() => {
+    // Data de hoje formatada no padrão YYYY-MM-DD salvo pelo sistema
+    const dataHoje = new Date().toISOString().split('T')[0];
+
     // 1. Sincronização em tempo real de Alunos
     const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => doc.data());
@@ -62,7 +65,6 @@ export function Dashboard() {
       const profsNosAlunos = listaAlunos.filter(a => a.eProfessor).length;
       setTotalProfessores(profsNosAlunos);
 
-      // Distribuição de Alunos por Classe (Gráfico de Pizza)
       const contagemClasses: Record<string, number> = {};
       listaAlunos.forEach((aluno: any) => {
         const nomeClasse = aluno.classe || 'Não definida';
@@ -84,24 +86,34 @@ export function Dashboard() {
       setTotalClasses(classesAtivasCount);
     });
 
-    // 3. Sincronização em tempo real de Chamadas (Gráficos de Frequência e Presença)
+    // 3. Sincronização em tempo real de Chamadas
     const unsubChamadas = onSnapshot(collection(db, 'chamadas'), (snapshot) => {
       const listaChamadas = snapshot.docs.map(doc => doc.data());
 
-      let sumPresentes = 0;
-      let sumVisitantes = 0;
-      let sumMatriculados = 0;
+      // FILTRA APENAS AS CHAMADAS DO DIA DE HOJE PARA OS CARDS DO TOPO
+      const chamadasHoje = listaChamadas.filter((cls: any) => cls.data === dataHoje);
 
-      // Gráfico de Barras: % Presença por Aula/Registro de Chamada
+      let sumPresentesHoje = 0;
+      let sumVisitantesHoje = 0;
+      let sumMatriculadosHoje = 0;
+
+      chamadasHoje.forEach((cls: any) => {
+        sumPresentesHoje += cls.totalPresentesAlunos || 0;
+        sumVisitantesHoje += cls.totalVisitantes || 0;
+        sumMatriculadosHoje += cls.totalMatriculados || 0;
+      });
+
+      setTotalPresentes(sumPresentesHoje);
+      setTotalVisitantes(sumVisitantesHoje);
+
+      const geralHoje = sumMatriculadosHoje > 0 ? Math.round((sumPresentesHoje / sumMatriculadosHoje) * 100) : 0;
+      setPercentualPresenca(geralHoje);
+
+      // GRÁFICOS: Usam o histórico completo (listaChamadas) para manter as estatísticas e evoluções temporais corretas
       const chartData = listaChamadas.map((cls: any) => {
         const presentes = cls.totalPresentesAlunos || 0;
         const visitantes = cls.totalVisitantes || 0;
         const matriculados = cls.totalMatriculados || 0;
-
-        sumPresentes += presentes;
-        sumVisitantes += visitantes;
-        sumMatriculados += matriculados;
-
         const taxa = matriculados > 0 ? Math.round((presentes / matriculados) * 100) : 0;
 
         return {
@@ -110,15 +122,8 @@ export function Dashboard() {
           total: presentes + visitantes
         };
       });
-
-      setTotalPresentes(sumPresentes);
-      setTotalVisitantes(sumVisitantes);
-
-      const geral = sumMatriculados > 0 ? Math.round((sumPresentes / sumMatriculados) * 100) : 0;
-      setPercentualPresenca(geral);
       setPresencaAulaData(chartData);
 
-      // Gráfico de Linha: Frequência acumulada por Classe
       const freqClasseMap = listaChamadas.reduce((acc: any, curr: any) => {
         const nomeClasse = curr.classe || 'Classe Geral';
         const totalAlunosPresentes = (curr.totalPresentesAlunos || 0) + (curr.totalVisitantes || 0);
@@ -132,7 +137,6 @@ export function Dashboard() {
       }));
       setFrequenciaClasseData(freqClasseArray);
 
-      // Gráfico de Linha: Evolução Temporal de Frequência
       const evolucaoMap = listaChamadas.reduce((acc: any, curr: any) => {
         const data = curr.data || 'Data';
         acc[data] = (acc[data] || 0) + (curr.totalPresentesAlunos || 0) + (curr.totalVisitantes || 0);
