@@ -18,7 +18,6 @@ export function ClassesModule() {
   const [sala, setSala] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Carregar do Firestore ao montar o componente
   useEffect(() => {
     async function carregarClasses() {
       try {
@@ -135,7 +134,7 @@ export function ClassesModule() {
 
   return (
     <div className="space-y-6 pb-10">
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 space-y-6">
+      <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200/80 space-y-6">
         
         <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
           <Building2 className="w-5 h-5 text-blue-950" />
@@ -198,7 +197,7 @@ export function ClassesModule() {
             </div>
           ) : (
             classes.map((item) => (
-              <div key={item.id} className="py-4 flex items-center justify-between gap-4 transition-all hover:bg-slate-50/50 px-3 rounded-xl">
+              <div key={item.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:bg-slate-50/50 px-3 rounded-xl">
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-slate-800 text-base">{item.nome}</span>
@@ -213,11 +212,11 @@ export function ClassesModule() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                   <button 
                     type="button"
                     onClick={() => handleEdit(item)}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 text-slate-700 hover:bg-slate-100 transition-all"
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 text-slate-700 hover:bg-slate-100 transition-all"
                   >
                     <Edit3 className="w-3.5 h-3.5 text-slate-500" />
                     Editar
@@ -226,7 +225,7 @@ export function ClassesModule() {
                   <button 
                     type="button"
                     onClick={() => toggleStatus(item)}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                    className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
                       item.ativa 
                         ? 'border-amber-200 text-amber-700 hover:bg-amber-50' 
                         : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
@@ -239,7 +238,7 @@ export function ClassesModule() {
                   <button 
                     type="button"
                     onClick={() => handleDelete(item.id)}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-red-50 text-red-600 border border-red-200/60 hover:bg-red-100 transition-all"
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-50 text-red-600 border border-red-200/60 hover:bg-red-100 transition-all"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Excluir
@@ -249,7 +248,6 @@ export function ClassesModule() {
             ))
           )}
         </div>
-
       </div>
     </div>
   );
