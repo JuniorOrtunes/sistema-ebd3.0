@@ -6,8 +6,8 @@ import { db } from '../../firebase';
 interface ClassItem {
   id: string;
   nome: string;
-  faixaEtaria: string;
-  sala: string;
+  faixaEtaria?: string;
+  sala?: string;
   ativa: boolean;
 }
 
@@ -39,15 +39,20 @@ export function ClassesModule() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nome.trim() || !faixaEtaria.trim() || !sala.trim()) {
-      alert('Preencha todos os campos da classe.');
+    // Apenas o nome é obrigatório agora
+    if (!nome.trim()) {
+      alert('Por favor, preencha o nome da classe.');
       return;
     }
 
     try {
       if (editingId !== null) {
         const classeRef = doc(db, 'classes', editingId);
-        const dadosAtualizados = { nome, faixaEtaria, sala };
+        const dadosAtualizados = { 
+          nome: nome.trim(), 
+          faixaEtaria: faixaEtaria.trim(), 
+          sala: sala.trim() 
+        };
 
         await updateDocFn(classeRef, dadosAtualizados);
 
@@ -58,9 +63,9 @@ export function ClassesModule() {
         setEditingId(null);
       } else {
         const novaClassePayload = {
-          nome,
-          faixaEtaria,
-          sala,
+          nome: nome.trim(),
+          faixaEtaria: faixaEtaria.trim(),
+          sala: sala.trim(),
           ativa: true
         };
 
@@ -87,8 +92,8 @@ export function ClassesModule() {
 
   const handleEdit = (item: ClassItem) => {
     setNome(item.nome);
-    setFaixaEtaria(item.faixaEtaria);
-    setSala(item.sala);
+    setFaixaEtaria(item.faixaEtaria || '');
+    setSala(item.sala || '');
     setEditingId(item.id);
   };
 
@@ -134,7 +139,7 @@ export function ClassesModule() {
 
   return (
     <div className="space-y-6 pb-10">
-      <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200/80 space-y-6">
+      <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200/85 space-y-6">
         
         <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
           <Building2 className="w-5 h-5 text-blue-950" />
@@ -143,7 +148,7 @@ export function ClassesModule() {
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-slate-50/70 p-4 rounded-xl border border-slate-200/60">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-500 tracking-wider">NOME</label>
+            <label className="text-xs font-semibold text-slate-500 tracking-wider">NOME <span className="text-red-500">*</span></label>
             <input 
               type="text" 
               placeholder="Ex: Novos Fiéis"
@@ -154,7 +159,7 @@ export function ClassesModule() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-500 tracking-wider">FAIXA ETÁRIA</label>
+            <label className="text-xs font-semibold text-slate-500 tracking-wider">FAIXA ETÁRIA <span className="text-slate-400 font-normal">(opcional)</span></label>
             <input 
               type="text" 
               placeholder="Ex: Jovens Adultos"
@@ -165,7 +170,7 @@ export function ClassesModule() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-500 tracking-wider">SALA</label>
+            <label className="text-xs font-semibold text-slate-500 tracking-wider">SALA <span className="text-slate-400 font-normal">(opcional)</span></label>
             <input 
               type="text" 
               placeholder="Ex: Sala 03"
@@ -208,7 +213,7 @@ export function ClassesModule() {
                     </span>
                   </div>
                   <p className="text-xs text-slate-500">
-                    {item.faixaEtaria} · {item.sala}
+                    {item.faixaEtaria || 'Faixa etária não informada'} · {item.sala || 'Sala não informada'}
                   </p>
                 </div>
 
