@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Printer, Lock, CheckCircle2 } from 'lucide-react';
-import { collection, getDocs, doc, setDoc, getDoc } from 'firebase/firestore';
+import { Printer, Lock, CheckCircle2, Trash2 } from 'lucide-react';
+import { collection, getDocs, doc, setDoc, getDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { db } from '../../firebase';
 
 interface ClasseItem {
@@ -90,26 +90,68 @@ export function Encerramento() {
     }
   };
 
+  const handleExcluirAulaData = async () => {
+    const confirmado = window.confirm(`Tem certeza que deseja excluir todos os registros/chamadas e o encerramento da data ${dataSelecionada}? Esta ação não poderá ser desfeita.`);
+    
+    if (confirmado) {
+      try {
+        setLoading(true);
+
+        // 1. Remove o documento de fechamento do dia, se existir
+        const fechamentoRef = doc(db, 'ebd_fechamentos', dataSelecionada);
+        await deleteDoc(fechamentoRef);
+
+        // 2. Busca e remove todos os documentos da coleção 'chamadas' correspondentes a esta data
+        const q = query(collection(db, 'chamadas'), where('data', '==', dataSelecionada));
+        const querySnapshot = await getDocs(q);
+        
+        const promessasExclusao = querySnapshot.docs.map(documento => 
+          deleteDoc(doc(db, 'chamadas', documento.id))
+        );
+        await Promise.all(promessasExclusao);
+
+        // 3. Reseta o estado local para refletir a exclusão em tempo real
+        setEbdEncerrada(false);
+        setClassesEBD(prev => prev.map(c => ({ ...c, presentes: 0, visitantes: 0 })));
+
+        alert('Registros da aula excluídos com sucesso!');
+      } catch (error) {
+        console.error('Erro ao excluir aula:', error);
+        alert('Erro ao excluir os registros da aula.');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4 print:hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <div className="space-y-1">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Domingo</label>
-              <input type="date" value={dataSelecionada} onChange={(e) => setDataSelecionada(e.target.value)} disabled={ebdEncerrada} className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 outline-none focus:border-slate-700 disabled:opacity-60" />
+              <input type="date" value={dataSelecionada} onChange={(e) => setDataSelecionada(e.target.value)} className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 outline-none focus:border-slate-700" />
             </div>
             <span className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${ebdEncerrada ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
               {ebdEncerrada ? <Lock className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
               {ebdEncerrada ? 'ENCERRADA' : 'ABERTA'}
             </span>
           </div>
-          <div className="flex gap-3">
+
+          <div className="flex gap-3 flex-wrap">
             <button onClick={() => window.print()} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold flex items-center gap-2">
               <Printer className="w-4 h-4" /> Imprimir
             </button>
             <button onClick={handleEncerrarEBD} className={`px-5 py-2 rounded-xl text-sm font-bold text-white ${ebdEncerrada ? 'bg-amber-600' : 'bg-rose-600'}`}>
               {ebdEncerrada ? 'Reabrir EBD' : 'Encerrar EBD'}
+            </button>
+            <button 
+              onClick={handleExcluirAulaData} 
+              className="px-4 py-2 bg-red-50 text-red-600 border border-red-200/60 hover:bg-red-100 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-all"
+              title="Excluir registros e chamadas desta data"
+            >
+              <Trash2 className="w-4 h-4" /> Excluir Aula
             </button>
           </div>
         </div>
