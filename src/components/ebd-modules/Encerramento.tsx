@@ -118,7 +118,7 @@ export function Encerramento() {
     };
   }, [dataSelecionada]);
 
-  // 2. ANIVERSARIANTES: Cálculo de datas, anos e aplicação das Bodas via helper
+  // 2. ANIVERSARIANTES: Cálculo, Bodas e Ordenação Crescente
   useEffect(() => {
     const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
@@ -131,7 +131,7 @@ export function Encerramento() {
       const dataLimite = new Date(dataAula);
       dataLimite.setDate(dataAula.getDate() - 6);
 
-      const aniversariantesEncontrados: AniversarianteItem[] = [];
+      const aniversariantesEncontrados: { item: AniversarianteItem; dataReal: Date }[] = [];
 
       listaAlunos.forEach(aluno => {
         const nome = aluno.nome || 'Sem Nome';
@@ -181,22 +181,28 @@ export function Encerramento() {
           if (tipo === 'Casamento' && anoOriginal && !isNaN(anoOriginal)) {
             const anosUniao = anoAtual - anoOriginal;
             if (anosUniao > 0) {
-              detalheAnos = obterNomeBodas(anosUniao); // Chamando a função modularizada
+              detalheAnos = obterNomeBodas(anosUniao);
             }
           }
 
           aniversariantesEncontrados.push({
-            id: `${id}-${tipo}`,
-            nome,
-            classe,
-            tipo,
-            dataStr: `${String(dia).padStart(2, '0')}/${String(mes + 1).padStart(2, '0')}`,
-            detalheAnos
+            dataReal: dataAniversarioEsteAno,
+            item: {
+              id: `${id}-${tipo}`,
+              nome,
+              classe,
+              tipo,
+              dataStr: `${String(dia).padStart(2, '0')}/${String(mes + 1).padStart(2, '0')}`,
+              detalheAnos
+            }
           });
         }
       }
 
-      setAniversariantesSemana(aniversariantesEncontrados);
+      // Ordenar por ordem crescente de data (da mais antiga para a mais recente na semana)
+      aniversariantesEncontrados.sort((a, b) => a.dataReal.getTime() - b.dataReal.getTime());
+
+      setAniversariantesSemana(aniversariantesEncontrados.map(x => x.item));
     });
 
     return () => unsubAlunos();
