@@ -33,5 +33,14 @@ const bodasMap: Record<number, string> = {
 
 export function obterNomeBodas(anos: number): string {
   if (anos <= 0) return 'Casamento';
-  return bodasMap[anos] || `${anos} anos de casados`;
+  const nomeBoda = bodasMap[anos];
+  const textoAnos = `${anos} ${anos === 1 ? 'ano' : 'anos'}`;
+
+  // Se existir um nome tradicional para essa quantidade de anos, exibe ambos
+  if (nomeBoda) {
+    return `${textoAnos} • ${nomeBoda}`;
+  }
+  
+  // Caso contrário, mostra apenas os anos
+  return textoAnos;
 }
