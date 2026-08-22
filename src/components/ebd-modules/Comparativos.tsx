@@ -13,7 +13,7 @@ const CORES_CLASSES = [
   { bg: 'bg-orange-600', text: 'text-orange-600' },   // 06
   { bg: 'bg-cyan-600', text: 'text-cyan-600' },       // 07
   { bg: 'bg-purple-600', text: 'text-purple-600' },   // 08
-  { bg: 'bg-slate-900', text: 'text-slate-900' },     // 09 
+  { bg: 'bg-slate-900', text: 'text-slate-900' },     // 09 (Preto)
 ];
 
 export function Comparativos() {
@@ -221,23 +221,6 @@ export function Comparativos() {
             ))
           ) : (
             <span className="text-xs text-slate-400 pb-28 z-10">Nenhuma classe encontrada.</span>
-          )}
-        </div>
-
-        {/* Legenda com Cores Altamente Distintas */}
-        <div className="flex items-center justify-center gap-3 pt-3 flex-wrap">
-          {listaClasses.length > 0 ? (
-            listaClasses.map((c: any, index) => {
-              const cor = CORES_CLASSES[index % CORES_CLASSES.length];
-              return (
-                <div key={c.id || index} className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 shadow-xs">
-                  <span className={`w-3 h-3 rounded-md ${cor.bg}`}></span>
-                  <span className="text-xs font-bold text-slate-700">{c.nome}</span>
-                </div>
-              );
-            })
-          ) : (
-            <span className="text-xs text-slate-400">Nenhuma classe cadastrada.</span>
           )}
         </div>
       </div>
