@@ -3,7 +3,6 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { TrendingUp, BarChart2, Calendar, Layers, Activity } from 'lucide-react';
 
-// Paleta de cores vibrantes e distintas para as classes
 const CORES_CLASSES = [
   { bg: 'bg-indigo-600', text: 'text-indigo-600', gradient: 'from-indigo-600 to-violet-500' },
   { bg: 'bg-emerald-600', text: 'text-emerald-600', gradient: 'from-emerald-600 to-teal-500' },
@@ -38,6 +37,10 @@ export function Comparativos() {
 
     const unsubClasses = onSnapshot(collection(db, 'classes'), (snapshot) => {
       const classes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // ORDENAÇÃO NUMÉRICA/ALFABÉTICA PELO NOME DA CLASSE
+      classes.sort((a: any, b: any) => a.nome.localeCompare(b.nome, 'pt-BR', { numeric: true }));
+
       setListaClasses(classes);
     });
 
@@ -195,7 +198,7 @@ export function Comparativos() {
           )}
         </div>
 
-        {/* Legenda Dinâmica com Cores Distintas */}
+        {/* Legenda em Ordem Numérica e Cores Distintas */}
         <div className="flex items-center justify-center gap-3 pt-3 flex-wrap">
           {listaClasses.length > 0 ? (
             listaClasses.map((c: any, index) => {
