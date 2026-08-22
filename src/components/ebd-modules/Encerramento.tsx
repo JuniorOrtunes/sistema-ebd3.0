@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Printer, Lock, CheckCircle2, Trash2, Users, Cake, Heart } from 'lucide-react';
 import { collection, doc, setDoc, deleteDoc, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { obterNomeBodas } from '../../utils/bodas'; // Importando o utilitário limpo
 
 interface ClasseItem {
   id: string;
@@ -22,7 +23,7 @@ interface AniversarianteItem {
   classe: string;
   tipo: 'Nascimento' | 'Casamento';
   dataStr: string;
-  detalheAnos?: string; // Para exibir quantos anos de casado
+  detalheAnos?: string;
 }
 
 export function Encerramento() {
@@ -117,7 +118,7 @@ export function Encerramento() {
     };
   }, [dataSelecionada]);
 
-  // 2. ANIVERSARIANTES: Cálculo de datas e anos completados de casamento
+  // 2. ANIVERSARIANTES: Cálculo de datas, anos e aplicação das Bodas via helper
   useEffect(() => {
     const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
@@ -152,12 +153,10 @@ export function Encerramento() {
           const partes = limpa.split('-');
           if (partes.length === 3) {
             if (partes[0].length === 4) {
-              // YYYY-MM-DD
               anoOriginal = parseInt(partes[0], 10);
               mes = parseInt(partes[1], 10) - 1;
               dia = parseInt(partes[2], 10);
             } else {
-              // DD-MM-YYYY
               dia = parseInt(partes[0], 10);
               mes = parseInt(partes[1], 10) - 1;
               anoOriginal = parseInt(partes[2], 10);
@@ -182,7 +181,7 @@ export function Encerramento() {
           if (tipo === 'Casamento' && anoOriginal && !isNaN(anoOriginal)) {
             const anosUniao = anoAtual - anoOriginal;
             if (anosUniao > 0) {
-              detalheAnos = `${anosUniao} ${anosUniao === 1 ? 'ano' : 'anos'}`;
+              detalheAnos = obterNomeBodas(anosUniao); // Chamando a função modularizada
             }
           }
 
@@ -366,7 +365,7 @@ export function Encerramento() {
                 )}
               </div>
 
-              {/* ANIVERSÁRIOS DE CASAMENTO */}
+              {/* ANIVERSÁRIOS DE CASAMENTO COM BODAS */}
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
                   <Heart className="w-4 h-4 text-rose-600" /> Casamentos ({casamentosSemana.length})
