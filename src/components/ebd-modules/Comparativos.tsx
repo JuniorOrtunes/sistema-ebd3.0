@@ -3,6 +3,18 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { TrendingUp, BarChart2, Calendar, Layers, Activity } from 'lucide-react';
 
+// Paleta de cores vibrantes e distintas para as classes
+const CORES_CLASSES = [
+  { bg: 'bg-indigo-600', text: 'text-indigo-600', gradient: 'from-indigo-600 to-violet-500' },
+  { bg: 'bg-emerald-600', text: 'text-emerald-600', gradient: 'from-emerald-600 to-teal-500' },
+  { bg: 'bg-amber-600', text: 'text-amber-600', gradient: 'from-amber-600 to-orange-500' },
+  { bg: 'bg-rose-600', text: 'text-rose-600', gradient: 'from-rose-600 to-pink-500' },
+  { bg: 'bg-blue-600', text: 'text-blue-600', gradient: 'from-blue-600 to-cyan-500' },
+  { bg: 'bg-purple-600', text: 'text-purple-600', gradient: 'from-purple-600 to-fuchsia-500' },
+  { bg: 'bg-teal-600', text: 'text-teal-600', gradient: 'from-teal-600 to-emerald-500' },
+  { bg: 'bg-orange-600', text: 'text-orange-600', gradient: 'from-orange-600 to-amber-500' },
+];
+
 export function Comparativos() {
   const [tipoVisualizacao, setTipoVisualizacao] = useState<'semana' | 'mes'>('semana');
   const [classeFiltro, setClasseFiltro] = useState('todas');
@@ -12,7 +24,6 @@ export function Comparativos() {
   const [dadosEncerramento, setDadosEncerramento] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Função para padronizar datas para o formato brasileiro DD/MM/AAAA
   const formatarDataBR = (dataStr: string) => {
     if (!dataStr) return '';
     if (/^\d{4}-\d{2}-\d{2}$/.test(dataStr)) {
@@ -22,23 +33,20 @@ export function Comparativos() {
     return dataStr;
   };
 
-  // Sincronização em Tempo Real (Realtime) com onSnapshot
   useEffect(() => {
     setLoading(true);
 
-    // 1. Realtime para Classes
     const unsubClasses = onSnapshot(collection(db, 'classes'), (snapshot) => {
       const classes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setListaClasses(classes);
     });
 
-    // 2. Realtime para Dados de Encerramento / Frequência
     const unsubEncerramento = onSnapshot(collection(db, 'ebd_encerramento_dados'), (snapshot) => {
       const encerramento = snapshot.docs.map(doc => doc.data());
       setDadosEncerramento(encerramento);
       setLoading(false);
     }, (error) => {
-      console.error('Erro ao sincronizar dados comparativos em tempo real:', error);
+      console.error('Erro ao sincronizar dados comparativos:', error);
       setLoading(false);
     });
 
@@ -48,7 +56,6 @@ export function Comparativos() {
     };
   }, []);
 
-  // Processamento e filtragem real dos dados
   const dadosProcessados = dadosEncerramento
     .map((cls: any) => {
       const presentes = cls.presentes || 0;
@@ -59,14 +66,13 @@ export function Comparativos() {
       return {
         referencia: dataFormatada || '—',
         presentes,
-      
         matriculados,
         frequenciaNum: frequencia,
         frequencia: `${frequencia}%`,
         vsAnterior: '—'
       };
     })
-    .filter(item => item.referencia !== '' && item.referencia !== '—' && !(item.referencia === '02/08/2026' && item.presentes === 0 && item.matriculados === 0));
+    .filter(item => item.referencia !== '' && item.referencia !== '—');
 
   const dadosTabela = tipoVisualizacao === 'semana' ? dadosProcessados : [
     { referencia: 'Agosto/2026', presentes: dadosProcessados.reduce((acc, cur) => acc + cur.presentes, 0), matriculados: dadosProcessados.reduce((acc, cur) => acc + cur.matriculados, 0), frequenciaNum: 85, frequencia: '85%', vsAnterior: '+5%' }
@@ -75,7 +81,7 @@ export function Comparativos() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12 animate-fadeIn">
       
-      {/* CABEÇALHO E FILTROS APRIMORADOS */}
+      {/* CABEÇALHO E FILTROS */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -92,16 +98,12 @@ export function Comparativos() {
         </div>
         
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-2 border-t border-slate-100">
-          
-          {/* Alternador de Tipo Visual */}
           <div className="flex items-center bg-slate-100 p-1 rounded-xl w-fit">
             <button
               type="button"
               onClick={() => setTipoVisualizacao('semana')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                tipoVisualizacao === 'semana'
-                  ? 'bg-[#0A192F] text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                tipoVisualizacao === 'semana' ? 'bg-[#0A192F] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Semana a semana
@@ -110,16 +112,13 @@ export function Comparativos() {
               type="button"
               onClick={() => setTipoVisualizacao('mes')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                tipoVisualizacao === 'mes'
-                  ? 'bg-[#0A192F] text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                tipoVisualizacao === 'mes' ? 'bg-[#0A192F] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Mês a mês
             </button>
           </div>
 
-          {/* Filtros de Sala e Mês */}
           <div className="flex flex-wrap items-center gap-3">
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
@@ -152,23 +151,19 @@ export function Comparativos() {
               </select>
             </div>
           </div>
-
         </div>
       </div>
 
-      {/* PAINEL GRÁFICO VISUAL APRIMORADO */}
+      {/* PAINEL GRÁFICO VISUAL */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 md:p-8 space-y-6">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-indigo-600" />
-              {tipoVisualizacao === 'semana' ? 'Desempenho por Domingo — Ago/2026' : 'Comparativo Mensal de Frequência'}
-            </h3>
-            <p className="text-xs text-slate-500">Visualização gráfica do percentual de frequência sobre os alunos ativos.</p>
-          </div>
+        <div>
+          <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <Activity className="w-4 h-4 text-indigo-600" />
+            {tipoVisualizacao === 'semana' ? 'Desempenho por Domingo — Ago/2026' : 'Comparativo Mensal de Frequência'}
+          </h3>
+          <p className="text-xs text-slate-500">Visualização gráfica do percentual de frequência sobre os alunos ativos.</p>
         </div>
 
-        {/* Gráfico Estilizado em Barras / Pontos */}
         <div className="h-64 border-b border-l border-slate-200 relative flex items-end justify-around px-8 pb-4 bg-slate-50/50 rounded-xl">
           <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-25 p-4">
             <div className="border-b border-dashed border-slate-400 w-full text-[10px] text-right pr-2 text-slate-500 font-bold">100%</div>
@@ -200,22 +195,25 @@ export function Comparativos() {
           )}
         </div>
 
-        {/* Legenda Dinâmica de Classes */}
-        <div className="flex items-center justify-center gap-6 pt-3 flex-wrap">
+        {/* Legenda Dinâmica com Cores Distintas */}
+        <div className="flex items-center justify-center gap-3 pt-3 flex-wrap">
           {listaClasses.length > 0 ? (
-            listaClasses.map((c: any, index) => (
-              <div key={c.id || index} className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-                <span className={`w-3 h-3 rounded-md ${index % 2 === 0 ? 'bg-indigo-600' : 'bg-slate-900'}`}></span>
-                <span className="text-xs font-bold text-slate-700">{c.nome}</span>
-              </div>
-            ))
+            listaClasses.map((c: any, index) => {
+              const cor = CORES_CLASSES[index % CORES_CLASSES.length];
+              return (
+                <div key={c.id || index} className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 shadow-xs">
+                  <span className={`w-3 h-3 rounded-md ${cor.bg}`}></span>
+                  <span className="text-xs font-bold text-slate-700">{c.nome}</span>
+                </div>
+              );
+            })
           ) : (
             <span className="text-xs text-slate-400">Nenhuma classe cadastrada.</span>
           )}
         </div>
       </div>
 
-      {/* TABELA DE VARIAÇÃO APRIMORADA */}
+      {/* TABELA DE VARIAÇÃO */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 md:p-8 space-y-4">
         <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-indigo-600" />
