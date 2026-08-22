@@ -32,10 +32,17 @@ export default function Chamada({ nomeClasse }: ChamadaProps) {
         const q = query(alunosRef, where('classe', '==', nomeClasse));
         const querySnapshot = await getDocs(q);
         
-        const lista: AlunoItem[] = querySnapshot.docs.map(docSnap => ({
-          id: docSnap.id,
-          nome: docSnap.data().nome || 'Aluno Sem Nome'
-        }));
+        const lista: AlunoItem[] = [];
+        querySnapshot.docs.forEach(docSnap => {
+          const dados = docSnap.data();
+          // Se a situação for 'Inativo', nós pulamos e não adicionamos na lista de chamada
+          if (dados.situacao === 'Inativo') return;
+
+          lista.push({
+            id: docSnap.id,
+            nome: dados.nome || 'Aluno Sem Nome'
+          });
+        });
 
         lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
         setAlunosDaClasse(lista);
