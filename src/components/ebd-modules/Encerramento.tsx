@@ -39,7 +39,6 @@ export function Encerramento() {
     let classesMap: Record<string, ClasseItem> = {};
     let chamadasList: any[] = [];
 
-    // Ouve alterações nas classes
     const unsubClasses = onSnapshot(collection(db, 'classes'), (classesSnap) => {
       classesMap = {};
       classesSnap.docs.forEach(docSnap => {
@@ -56,13 +55,11 @@ export function Encerramento() {
       processarDados(classesMap, chamadasList);
     });
 
-    // Ouve alterações nas chamadas
     const unsubChamadas = onSnapshot(collection(db, 'chamadas'), (chamadasSnap) => {
       chamadasList = chamadasSnap.docs.map(doc => doc.data());
       processarDados(classesMap, chamadasList);
     });
 
-    // Ouve alterações no status de fechamento do dia
     const fechamentoRef = doc(db, 'ebd_fechamentos', dataSelecionada);
     const unsubFechamento = onSnapshot(fechamentoRef, (fechamentoSnap) => {
       setEbdEncerrada(fechamentoSnap.exists() ? (fechamentoSnap.data().encerrada || false) : false);
@@ -119,7 +116,7 @@ export function Encerramento() {
     };
   }, [dataSelecionada]);
 
-  // 2. ANIVERSARIANTES: Cálculo Retroativo de 7 dias (incluindo inativos)
+  // 2. ANIVERSARIANTES: Cálculo Retroativo de 7 dias (com parser blindado para vários formatos de data)
   useEffect(() => {
     const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
@@ -141,23 +138,35 @@ export function Encerramento() {
       });
 
       function checarEInserirData(dataStr: string, tipo: 'Nascimento' | 'Casamento', id: string, nome: string, classe: string) {
-        if (!dataStr) return;
+        if (!dataStr || typeof dataStr !== 'string') return;
 
-        let mes: number, dia: number;
+        let mes: number | null = null;
+        let dia: number | null = null;
+        const limpa = dataStr.trim();
 
-        if (dataStr.includes('-')) {
-          const partes = dataStr.split('-');
+        // Tenta formatos comuns: YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, etc.
+        if (limpa.includes('-')) {
+          const partes = limpa.split('-');
           if (partes.length === 3) {
-            mes = parseInt(partes[1], 10) - 1;
-            dia = parseInt(partes[2], 10);
-          } else return;
-        } else if (dataStr.includes('/')) {
-          const partes = dataStr.split('/');
+            if (partes[0].length === 4) {
+              // YYYY-MM-DD
+              mes = parseInt(partes[1], 10) - 1;
+              dia = parseInt(partes[2], 10);
+            } else {
+              // DD-MM-YYYY
+              dia = parseInt(partes[0], 10);
+              mes = parseInt(partes[1], 10) - 1;
+            }
+          }
+        } else if (limpa.includes('/')) {
+          const partes = limpa.split('/');
           if (partes.length === 3) {
             dia = parseInt(partes[0], 10);
             mes = parseInt(partes[1], 10) - 1;
-          } else return;
-        } else return;
+          }
+        }
+
+        if (mes === null || dia === null || isNaN(mes) || isNaN(dia)) return;
 
         const anoAtual = dataAula.getFullYear();
         const dataAniversarioEsteAno = new Date(anoAtual, mes, dia);
@@ -295,45 +304,50 @@ export function Encerramento() {
               </div>
             </div>
 
-            {/* SEÇÃO DE VISITANTES */}
-            <div className="border-t border-slate-100 pt-6">
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2 mb-3">
-                <Users className="w-4 h-4 text-amber-600" /> Visitantes do Dia ({visitantesDia.length})
-              </h3>
-              {visitantesDia.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {visitantesDia.map((vis, idx) => (
-                    <div key={idx} className="bg-amber-50/50 p-3 rounded-xl border border-amber-100/60 flex justify-between items-center">
-                      <span className="text-xs font-semibold text-slate-800">{vis.nome}</span>
-                      <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">{vis.classe}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-slate-400 italic">Nenhum visitante registrado nesta data.</p>
-              )}
-            </div>
-
-            {/* SEÇÃO DE ANIVERSARIANTES DA SEMANA */}
-            <div className="border-t border-slate-100 pt-6">
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2 mb-3">
-                <Cake className="w-4 h-4 text-indigo-600" /> Aniversariantes da Semana ({aniversariantesSemana.length})
-              </h3>
-              {aniversariantesSemana.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {aniversariantesSemana.map((aniv) => (
-                    <div key={aniv.id} className="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100/60 flex justify-between items-center">
-                      <div>
-                        <p className="text-xs font-semibold text-slate-800">{aniv.nome}</p>
-                        <p className="text-[10px] text-slate-500">{aniv.classe} • <span className="font-bold text-indigo-600">{aniv.tipo}</span></p>
+            {/* SEÇÃO LADO A LADO: VISITANTES E ANIVERSARIANTES */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 border-t border-slate-100 pt-6">
+              
+              {/* VISITANTES DO DIA */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
+                  <Users className="w-4 h-4 text-amber-600" /> Visitantes do Dia ({visitantesDia.length})
+                </h3>
+                {visitantesDia.length > 0 ? (
+                  <div className="space-y-2">
+                    {visitantesDia.map((vis, idx) => (
+                      <div key={idx} className="bg-amber-50/50 p-3 rounded-xl border border-amber-100/60 flex justify-between items-center">
+                        <span className="text-xs font-semibold text-slate-800">{vis.nome}</span>
+                        <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">{vis.classe}</span>
                       </div>
-                      <span className="text-xs font-bold bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-lg">{aniv.dataStr}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-slate-400 italic">Nenhum aniversariante no período retroativo de 7 dias.</p>
-              )}
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">Nenhum visitante registrado nesta data.</p>
+                )}
+              </div>
+
+              {/* ANIVERSARIANTES DA SEMANA */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
+                  <Cake className="w-4 h-4 text-indigo-600" /> Aniversariantes da Semana ({aniversariantesSemana.length})
+                </h3>
+                {aniversariantesSemana.length > 0 ? (
+                  <div className="space-y-2">
+                    {aniversariantesSemana.map((aniv) => (
+                      <div key={aniv.id} className="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100/60 flex justify-between items-center">
+                        <div>
+                          <p className="text-xs font-semibold text-slate-800">{aniv.nome}</p>
+                          <p className="text-[10px] text-slate-500">{aniv.classe} • <span className="font-bold text-indigo-600">{aniv.tipo}</span></p>
+                        </div>
+                        <span className="text-xs font-bold bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-lg">{aniv.dataStr}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">Nenhum aniversariante no período retroativo de 7 dias.</p>
+                )}
+              </div>
+
             </div>
 
           </div>
