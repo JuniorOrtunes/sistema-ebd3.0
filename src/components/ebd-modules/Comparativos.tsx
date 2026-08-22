@@ -3,15 +3,17 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { TrendingUp, BarChart2, Calendar, Layers, Activity } from 'lucide-react';
 
+// Paleta com 9 cores rigorosamente contrastantes e únicas para cada turma
 const CORES_CLASSES = [
-  { bg: 'bg-indigo-600', text: 'text-indigo-600', gradient: 'from-indigo-600 to-violet-500' },
-  { bg: 'bg-emerald-600', text: 'text-emerald-600', gradient: 'from-emerald-600 to-teal-500' },
-  { bg: 'bg-amber-600', text: 'text-amber-600', gradient: 'from-amber-600 to-orange-500' },
-  { bg: 'bg-rose-600', text: 'text-rose-600', gradient: 'from-rose-600 to-pink-500' },
-  { bg: 'bg-blue-600', text: 'text-blue-600', gradient: 'from-blue-600 to-cyan-500' },
-  { bg: 'bg-purple-600', text: 'text-purple-600', gradient: 'from-purple-600 to-fuchsia-500' },
-  { bg: 'bg-teal-600', text: 'text-teal-600', gradient: 'from-teal-600 to-emerald-500' },
-  { bg: 'bg-orange-600', text: 'text-orange-600', gradient: 'from-orange-600 to-amber-500' },
+  { bg: 'bg-indigo-600', text: 'text-indigo-600' },   // 01
+  { bg: 'bg-emerald-600', text: 'text-emerald-600' }, // 02
+  { bg: 'bg-amber-500', text: 'text-amber-500' },     // 03
+  { bg: 'bg-rose-600', text: 'text-rose-600' },       // 04
+  { bg: 'bg-blue-600', text: 'text-blue-600' },       // 05
+  { bg: 'bg-purple-600', text: 'text-purple-600' },   // 06
+  { bg: 'bg-cyan-600', text: 'text-cyan-600' },       // 07
+  { bg: 'bg-orange-600', text: 'text-orange-600' },   // 08
+  { bg: 'bg-pink-600', text: 'text-pink-600' },       // 09
 ];
 
 export function Comparativos() {
@@ -37,10 +39,7 @@ export function Comparativos() {
 
     const unsubClasses = onSnapshot(collection(db, 'classes'), (snapshot) => {
       const classes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      // ORDENAÇÃO NUMÉRICA/ALFABÉTICA PELO NOME DA CLASSE
       classes.sort((a: any, b: any) => a.nome.localeCompare(b.nome, 'pt-BR', { numeric: true }));
-
       setListaClasses(classes);
     });
 
@@ -58,6 +57,23 @@ export function Comparativos() {
       unsubEncerramento();
     };
   }, []);
+
+  const dadosGraficoClasses = listaClasses.map((cls, index) => {
+    const registro = dadosEncerramento.find((d: any) => d.classeId === cls.id || d.nomeClasse === cls.nome);
+    const presentes = registro?.presentes || 0;
+    const matriculados = registro?.matriculados || cls.matriculados || 10;
+    const frequenciaNum = matriculados > 0 ? Math.round((presentes / matriculados) * 100) : 0;
+    
+    return {
+      id: cls.id,
+      nome: cls.nome,
+      presentes,
+      matriculados,
+      frequenciaNum,
+      frequencia: `${frequenciaNum}%`,
+      cor: CORES_CLASSES[index % CORES_CLASSES.length]
+    };
+  });
 
   const dadosProcessados = dadosEncerramento
     .map((cls: any) => {
@@ -157,17 +173,18 @@ export function Comparativos() {
         </div>
       </div>
 
-      {/* PAINEL GRÁFICO VISUAL */}
+      {/* PAINEL GRÁFICO POR CLASSE */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 md:p-8 space-y-6">
         <div>
           <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <Activity className="w-4 h-4 text-indigo-600" />
-            {tipoVisualizacao === 'semana' ? 'Desempenho por Domingo — Ago/2026' : 'Comparativo Mensal de Frequência'}
+            Desempenho de Frequência por Classe — Ago/2026
           </h3>
-          <p className="text-xs text-slate-500">Visualização gráfica do percentual de frequência sobre os alunos ativos.</p>
+          <p className="text-xs text-slate-500">Passe o mouse sobre as colunas para identificar a classe e o percentual exato.</p>
         </div>
 
-        <div className="h-64 border-b border-l border-slate-200 relative flex items-end justify-around px-8 pb-4 bg-slate-50/50 rounded-xl">
+        {/* Gráfico de Barras por Classe */}
+        <div className="h-72 border-b border-l border-slate-200 relative flex items-end justify-around px-4 md:px-8 pb-4 bg-slate-50/50 rounded-xl overflow-x-auto">
           <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-25 p-4">
             <div className="border-b border-dashed border-slate-400 w-full text-[10px] text-right pr-2 text-slate-500 font-bold">100%</div>
             <div className="border-b border-dashed border-slate-400 w-full text-[10px] text-right pr-2 text-slate-500 font-bold">75%</div>
@@ -177,28 +194,37 @@ export function Comparativos() {
           </div>
 
           {loading ? (
-            <span className="text-xs text-slate-400 pb-24 z-10 font-medium">Sincronizando dados em tempo real...</span>
-          ) : dadosTabela.length > 0 ? (
-            dadosTabela.map((item, idx) => (
-              <div key={idx} className="flex flex-col items-center gap-2 z-10 h-full justify-end group">
-                <div className="text-[10px] font-bold text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {item.frequencia}
+            <span className="text-xs text-slate-400 pb-28 z-10 font-medium">Sincronizando dados em tempo real...</span>
+          ) : dadosGraficoClasses.length > 0 ? (
+            dadosGraficoClasses.map((item, idx) => (
+              <div key={item.id || idx} className="flex flex-col items-center gap-2 z-10 h-full justify-end group px-1">
+                {/* Tooltip com Nome da Classe e Frequência */}
+                <div className="absolute -top-3 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-slate-900 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-lg pointer-events-none whitespace-nowrap z-30">
+                  {item.nome}: {item.frequencia}
                 </div>
+
+                <span className="text-[10px] font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {item.frequencia}
+                </span>
+
+                {/* Barra com a cor exclusiva da turma */}
                 <div 
-                  className="w-10 bg-gradient-to-t from-indigo-600 to-violet-500 rounded-t-xl transition-all duration-500 shadow-md group-hover:brightness-110" 
-                  style={{ height: `${Math.max(item.frequenciaNum, 10)}%` }}
+                  className={`w-8 md:w-10 rounded-t-xl transition-all duration-500 shadow-md group-hover:brightness-110 group-hover:scale-y-105 ${item.cor.bg}`} 
+                  style={{ height: `${Math.max(item.frequenciaNum, 12)}%` }}
                 ></div>
-                <span className="text-[11px] font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-xs">
-                  {item.referencia}
+
+                {/* Sigla ou Número da Turma no eixo X */}
+                <span className="text-[10px] font-bold text-slate-600 bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-xs truncate max-w-[70px]" title={item.nome}>
+                  {item.nome.split(' ')[0]} {item.nome.split(' ')[1] || ''}
                 </span>
               </div>
             ))
           ) : (
-            <span className="text-xs text-slate-400 pb-24 z-10">Nenhum registro de aula para o período selecionado.</span>
+            <span className="text-xs text-slate-400 pb-28 z-10">Nenhuma classe encontrada.</span>
           )}
         </div>
 
-        {/* Legenda em Ordem Numérica e Cores Distintas */}
+        {/* Legenda com Cores Altamente Distintas */}
         <div className="flex items-center justify-center gap-3 pt-3 flex-wrap">
           {listaClasses.length > 0 ? (
             listaClasses.map((c: any, index) => {
