@@ -116,14 +116,17 @@ export function Encerramento() {
     };
   }, [dataSelecionada]);
 
-  // 2. ANIVERSARIANTES: Cálculo Retroativo de 7 dias (com parser blindado para vários formatos de data)
+  // 2. ANIVERSARIANTES: Cálculo Retroativo de 7 dias com parser seguro e imune a fuso horário
   useEffect(() => {
     const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
       
       if (!dataSelecionada) return;
 
-      const dataAula = new Date(dataSelecionada + 'T00:00:00');
+      // Cria a data de referência a partir da string selecionada (YYYY-MM-DD) sem deslocamento de fuso
+      const [anoStr, mesStr, diaStr] = dataSelecionada.split('-');
+      const dataAula = new Date(parseInt(anoStr), parseInt(mesStr) - 1, parseInt(diaStr));
+      
       const dataLimite = new Date(dataAula);
       dataLimite.setDate(dataAula.getDate() - 6);
 
@@ -137,19 +140,14 @@ export function Encerramento() {
         checarEInserirData(aluno.dataCasamento, 'Casamento', aluno.id, nome, classe);
       });
 
-  function checarEInserirData(dataStr: string, tipo: 'Nascimento' | 'Casamento', id: string, nome: string, classe: string) {
-   if (!dataStr || typeof dataStr !== 'string') return;
-  
-  // LOG DE DEBUG: Vamos ver o que o sistema está lendo para cada aluno
-  console.log(`Debug Aluno: ${nome} | Tipo: ${tipo} | Data Lida: "${dataStr}"`);
+      function checarEInserirData(dataStr: string, tipo: 'Nascimento' | 'Casamento', id: string, nome: string, classe: string) {
+        if (!dataStr || typeof dataStr !== 'string') return;
 
-  let mes: number | null = null;
-  let dia: number | null = null;
-  const limpa = dataStr.trim();
-  
-  // ... (resto da lógica de parser que já está lá)
+        let mes: number | null = null;
+        let dia: number | null = null;
+        const limpa = dataStr.trim();
 
-        // Tenta formatos comuns: YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, etc.
+        // Parser blindado para YYYY-MM-DD ou DD/MM/YYYY
         if (limpa.includes('-')) {
           const partes = limpa.split('-');
           if (partes.length === 3) {
