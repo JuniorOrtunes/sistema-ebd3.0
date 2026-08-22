@@ -116,14 +116,13 @@ export function Encerramento() {
     };
   }, [dataSelecionada]);
 
-  // 2. ANIVERSARIANTES: Cálculo Retroativo de 7 dias com parser seguro e imune a fuso horário
+  // 2. ANIVERSARIANTES: Leitura correta usando os campos 'nascimento' e 'casamento'
   useEffect(() => {
     const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
       
       if (!dataSelecionada) return;
 
-      // Cria a data de referência a partir da string selecionada (YYYY-MM-DD) sem deslocamento de fuso
       const [anoStr, mesStr, diaStr] = dataSelecionada.split('-');
       const dataAula = new Date(parseInt(anoStr), parseInt(mesStr) - 1, parseInt(diaStr));
       
@@ -134,10 +133,11 @@ export function Encerramento() {
 
       listaAlunos.forEach(aluno => {
         const nome = aluno.nome || 'Sem Nome';
-        const classe = aluno.classe || 'Sem Classe';
+        const classe = aluno.classe || aluno.turma || 'Sem Classe';
 
-        checarEInserirData(aluno.dataNascimento, 'Nascimento', aluno.id, nome, classe);
-        checarEInserirData(aluno.dataCasamento, 'Casamento', aluno.id, nome, classe);
+        // Campos reais encontrados no seu Firestore
+        checarEInserirData(aluno.nascimento, 'Nascimento', aluno.id, nome, classe);
+        checarEInserirData(aluno.casamento, 'Casamento', aluno.id, nome, classe);
       });
 
       function checarEInserirData(dataStr: string, tipo: 'Nascimento' | 'Casamento', id: string, nome: string, classe: string) {
@@ -147,7 +147,6 @@ export function Encerramento() {
         let dia: number | null = null;
         const limpa = dataStr.trim();
 
-        // Parser blindado para YYYY-MM-DD ou DD/MM/YYYY
         if (limpa.includes('-')) {
           const partes = limpa.split('-');
           if (partes.length === 3) {
