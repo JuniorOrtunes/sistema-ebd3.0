@@ -22,6 +22,7 @@ interface AniversarianteItem {
   classe: string;
   tipo: 'Nascimento' | 'Casamento';
   dataStr: string;
+  detalheAnos?: string; // Para exibir quantos anos de casado
 }
 
 export function Encerramento() {
@@ -116,7 +117,7 @@ export function Encerramento() {
     };
   }, [dataSelecionada]);
 
-  // 2. ANIVERSARIANTES: Leitura correta usando os campos 'nascimento' e 'casamento'
+  // 2. ANIVERSARIANTES: Cálculo de datas e anos completados de casamento
   useEffect(() => {
     const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
@@ -142,6 +143,7 @@ export function Encerramento() {
       function checarEInserirData(dataStr: string, tipo: 'Nascimento' | 'Casamento', id: string, nome: string, classe: string) {
         if (!dataStr || typeof dataStr !== 'string') return;
 
+        let anoOriginal: number | null = null;
         let mes: number | null = null;
         let dia: number | null = null;
         const limpa = dataStr.trim();
@@ -150,11 +152,15 @@ export function Encerramento() {
           const partes = limpa.split('-');
           if (partes.length === 3) {
             if (partes[0].length === 4) {
+              // YYYY-MM-DD
+              anoOriginal = parseInt(partes[0], 10);
               mes = parseInt(partes[1], 10) - 1;
               dia = parseInt(partes[2], 10);
             } else {
+              // DD-MM-YYYY
               dia = parseInt(partes[0], 10);
               mes = parseInt(partes[1], 10) - 1;
+              anoOriginal = parseInt(partes[2], 10);
             }
           }
         } else if (limpa.includes('/')) {
@@ -162,6 +168,7 @@ export function Encerramento() {
           if (partes.length === 3) {
             dia = parseInt(partes[0], 10);
             mes = parseInt(partes[1], 10) - 1;
+            anoOriginal = parseInt(partes[2], 10);
           }
         }
 
@@ -171,12 +178,21 @@ export function Encerramento() {
         const dataAniversarioEsteAno = new Date(anoAtual, mes, dia);
 
         if (dataAniversarioEsteAno >= dataLimite && dataAniversarioEsteAno <= dataAula) {
+          let detalheAnos = undefined;
+          if (tipo === 'Casamento' && anoOriginal && !isNaN(anoOriginal)) {
+            const anosUniao = anoAtual - anoOriginal;
+            if (anosUniao > 0) {
+              detalheAnos = `${anosUniao} ${anosUniao === 1 ? 'ano' : 'anos'}`;
+            }
+          }
+
           aniversariantesEncontrados.push({
             id: `${id}-${tipo}`,
             nome,
             classe,
             tipo,
-            dataStr: `${String(dia).padStart(2, '0')}/${String(mes + 1).padStart(2, '0')}`
+            dataStr: `${String(dia).padStart(2, '0')}/${String(mes + 1).padStart(2, '0')}`,
+            detalheAnos
           });
         }
       }
@@ -193,7 +209,6 @@ export function Encerramento() {
   const totalGeralPresenca = totalPresentesAlunos + totalVisitantes;
   const percentualFrequencia = totalMatriculados > 0 ? Math.round((totalPresentesAlunos / totalMatriculados) * 100) : 0;
 
-  // Filtros separados para renderização organizada
   const nascimentosSemana = aniversariantesSemana.filter(a => a.tipo === 'Nascimento');
   const casamentosSemana = aniversariantesSemana.filter(a => a.tipo === 'Casamento');
 
@@ -307,7 +322,7 @@ export function Encerramento() {
               </div>
             </div>
 
-            {/* SEÇÃO EM 3 COLUNAS: VISITANTES, ANIVERSÁRIOS DE NASCIMENTO E CASAMENTO */}
+            {/* SEÇÃO EM 3 COLUNAS: VISITANTES, ANIVERSÁRIOS E CASAMENTOS */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 border-t border-slate-100 pt-6">
               
               {/* VISITANTES DO DIA */}
@@ -362,7 +377,9 @@ export function Encerramento() {
                       <div key={aniv.id} className="bg-rose-50/50 p-3 rounded-xl border border-rose-100/60 flex justify-between items-center">
                         <div>
                           <p className="text-xs font-semibold text-slate-800">{aniv.nome}</p>
-                          <p className="text-[10px] text-slate-500">{aniv.classe}</p>
+                          <p className="text-[10px] text-slate-500">
+                            {aniv.classe} {aniv.detalheAnos && <span className="font-bold text-rose-600">• {aniv.detalheAnos}</span>}
+                          </p>
                         </div>
                         <span className="text-xs font-bold bg-rose-100 text-rose-800 px-2.5 py-1 rounded-lg">{aniv.dataStr}</span>
                       </div>
