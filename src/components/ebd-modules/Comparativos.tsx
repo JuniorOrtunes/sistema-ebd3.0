@@ -10,10 +10,10 @@ const CORES_CLASSES = [
   { bg: 'bg-amber-500', text: 'text-amber-500' },     // 03
   { bg: 'bg-rose-600', text: 'text-rose-600' },       // 04
   { bg: 'bg-blue-600', text: 'text-blue-600' },       // 05
-  { bg: 'bg-purple-600', text: 'text-purple-600' },   // 06
+  { bg: 'bg-orange-600', text: 'text-orange-600' },   // 06
   { bg: 'bg-cyan-600', text: 'text-cyan-600' },       // 07
-  { bg: 'bg-orange-600', text: 'text-orange-600' },   // 08
-  { bg: 'bg-pink-600', text: 'text-pink-600' },       // 09
+  { bg: 'bg-purple-600', text: 'text-purple-600' },   // 08
+  { bg: 'bg-slate-900', text: 'text-slate-900' },     // 09 
 ];
 
 export function Comparativos() {
