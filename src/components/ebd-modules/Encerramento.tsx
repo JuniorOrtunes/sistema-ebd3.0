@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Printer, Lock, CheckCircle2, Trash2, Users, Cake } from 'lucide-react';
+import { Printer, Lock, CheckCircle2, Trash2, Users, Cake, Heart } from 'lucide-react';
 import { collection, doc, setDoc, deleteDoc, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
 
@@ -135,7 +135,6 @@ export function Encerramento() {
         const nome = aluno.nome || 'Sem Nome';
         const classe = aluno.classe || aluno.turma || 'Sem Classe';
 
-        // Campos reais encontrados no seu Firestore
         checarEInserirData(aluno.nascimento, 'Nascimento', aluno.id, nome, classe);
         checarEInserirData(aluno.casamento, 'Casamento', aluno.id, nome, classe);
       });
@@ -151,11 +150,9 @@ export function Encerramento() {
           const partes = limpa.split('-');
           if (partes.length === 3) {
             if (partes[0].length === 4) {
-              // YYYY-MM-DD
               mes = parseInt(partes[1], 10) - 1;
               dia = parseInt(partes[2], 10);
             } else {
-              // DD-MM-YYYY
               dia = parseInt(partes[0], 10);
               mes = parseInt(partes[1], 10) - 1;
             }
@@ -195,6 +192,10 @@ export function Encerramento() {
   const totalVisitantes = visitantesDia.length;
   const totalGeralPresenca = totalPresentesAlunos + totalVisitantes;
   const percentualFrequencia = totalMatriculados > 0 ? Math.round((totalPresentesAlunos / totalMatriculados) * 100) : 0;
+
+  // Filtros separados para renderização organizada
+  const nascimentosSemana = aniversariantesSemana.filter(a => a.tipo === 'Nascimento');
+  const casamentosSemana = aniversariantesSemana.filter(a => a.tipo === 'Casamento');
 
   const handleEncerrarEBD = async () => {
     const novoStatus = !ebdEncerrada;
@@ -306,13 +307,13 @@ export function Encerramento() {
               </div>
             </div>
 
-            {/* SEÇÃO LADO A LADO: VISITANTES E ANIVERSARIANTES */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 border-t border-slate-100 pt-6">
+            {/* SEÇÃO EM 3 COLUNAS: VISITANTES, ANIVERSÁRIOS DE NASCIMENTO E CASAMENTO */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 border-t border-slate-100 pt-6">
               
               {/* VISITANTES DO DIA */}
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
-                  <Users className="w-4 h-4 text-amber-600" /> Visitantes do Dia ({visitantesDia.length})
+                  <Users className="w-4 h-4 text-amber-600" /> Visitantes ({visitantesDia.length})
                 </h3>
                 {visitantesDia.length > 0 ? (
                   <div className="space-y-2">
@@ -324,29 +325,51 @@ export function Encerramento() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-400 italic">Nenhum visitante registrado nesta data.</p>
+                  <p className="text-xs text-slate-400 italic">Nenhum visitante registrado.</p>
                 )}
               </div>
 
-              {/* ANIVERSARIANTES DA SEMANA */}
+              {/* ANIVERSARIANTES DE NASCIMENTO */}
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
-                  <Cake className="w-4 h-4 text-indigo-600" /> Aniversariantes da Semana ({aniversariantesSemana.length})
+                  <Cake className="w-4 h-4 text-indigo-600" /> Aniversários ({nascimentosSemana.length})
                 </h3>
-                {aniversariantesSemana.length > 0 ? (
+                {nascimentosSemana.length > 0 ? (
                   <div className="space-y-2">
-                    {aniversariantesSemana.map((aniv) => (
+                    {nascimentosSemana.map((aniv) => (
                       <div key={aniv.id} className="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100/60 flex justify-between items-center">
                         <div>
                           <p className="text-xs font-semibold text-slate-800">{aniv.nome}</p>
-                          <p className="text-[10px] text-slate-500">{aniv.classe} • <span className="font-bold text-indigo-600">{aniv.tipo}</span></p>
+                          <p className="text-[10px] text-slate-500">{aniv.classe}</p>
                         </div>
                         <span className="text-xs font-bold bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-lg">{aniv.dataStr}</span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-400 italic">Nenhum aniversariante no período retroativo de 7 dias.</p>
+                  <p className="text-xs text-slate-400 italic">Nenhum aniversariante na semana.</p>
+                )}
+              </div>
+
+              {/* ANIVERSÁRIOS DE CASAMENTO */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
+                  <Heart className="w-4 h-4 text-rose-600" /> Casamentos ({casamentosSemana.length})
+                </h3>
+                {casamentosSemana.length > 0 ? (
+                  <div className="space-y-2">
+                    {casamentosSemana.map((aniv) => (
+                      <div key={aniv.id} className="bg-rose-50/50 p-3 rounded-xl border border-rose-100/60 flex justify-between items-center">
+                        <div>
+                          <p className="text-xs font-semibold text-slate-800">{aniv.nome}</p>
+                          <p className="text-[10px] text-slate-500">{aniv.classe}</p>
+                        </div>
+                        <span className="text-xs font-bold bg-rose-100 text-rose-800 px-2.5 py-1 rounded-lg">{aniv.dataStr}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">Nenhum aniversário de casamento.</p>
                 )}
               </div>
 
