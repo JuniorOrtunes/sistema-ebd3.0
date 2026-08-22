@@ -326,9 +326,12 @@ export function Alunos() {
     setClasseLeciona('Selecione uma classe');
   };
 
-  // Filtro atualizado considerando as flags de superintendente e professor
+// Filtro atualizado: agora oculta alunos com situacao 'Inativo'
   const alunosFiltrados = alunos
     .filter(a => {
+      // Condição Adicional para ocultar inativos
+      const ehAtivo = a.situacao !== 'Inativo'; 
+      
       const matchBusca = a.nome?.toLowerCase().includes(busca.toLowerCase());
       const matchClasse = filtroClasse === 'Todas' || a.classe === filtroClasse || a.turma === filtroClasse;
       
@@ -341,7 +344,7 @@ export function Alunos() {
         matchTipo = !a.eProfessor && !(a as any).eSuperintendente;
       }
 
-      return matchBusca && matchClasse && matchTipo;
+      return ehAtivo && matchBusca && matchClasse && matchTipo;
     })
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
 
