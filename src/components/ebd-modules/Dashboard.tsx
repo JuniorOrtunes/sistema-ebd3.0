@@ -55,14 +55,18 @@ export function Dashboard() {
   useEffect(() => {
     const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => doc.data());
-      const ativos = listaAlunos.filter(a => !a.situacao || a.situacao === 'Ativo' || a.ativo === true).length;
-      setTotalAlunos(ativos);
+      
+      // Filtro para considerar apenas os alunos ativos
+      const alunosAtivos = listaAlunos.filter(a => !a.situacao || a.situacao === 'Ativo' || a.ativo === true);
+      
+      setTotalAlunos(alunosAtivos.length);
 
       const profsNosAlunos = listaAlunos.filter(a => a.eProfessor).length;
       setTotalProfessores(profsNosAlunos);
 
       const contagemClasses: Record<string, number> = {};
-      listaAlunos.forEach((aluno: any) => {
+      // Usamos alunosAtivos para que o gráfico de pizza não conte os inativos
+      alunosAtivos.forEach((aluno: any) => {
         const nomeClasse = aluno.classe || 'Não definida';
         contagemClasses[nomeClasse] = (contagemClasses[nomeClasse] || 0) + 1;
       });
