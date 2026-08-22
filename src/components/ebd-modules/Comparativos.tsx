@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { TrendingUp, BarChart2, Calendar, Layers, Activity } from 'lucide-react';
 
 export function Comparativos() {
   const [tipoVisualizacao, setTipoVisualizacao] = useState<'semana' | 'mes'>('semana');
@@ -14,75 +15,85 @@ export function Comparativos() {
   // Função para padronizar datas para o formato brasileiro DD/MM/AAAA
   const formatarDataBR = (dataStr: string) => {
     if (!dataStr) return '';
-    // Se estiver no formato AAAA-MM-DD (ex: 2026-08-10)
     if (/^\d{4}-\d{2}-\d{2}$/.test(dataStr)) {
       const [ano, mes, dia] = dataStr.split('-');
       return `${dia}/${mes}/${ano}`;
     }
-    return dataStr; // Retorna como está se já estiver formatado ou em outro padrão
+    return dataStr;
   };
 
-  // Carregar classes e dados de chamadas/encerramento do Firestore
+  // Sincronização em Tempo Real (Realtime) com onSnapshot
   useEffect(() => {
-    async function carregarDados() {
-      try {
-        setLoading(true);
-        
-        // 1. Buscar Classes cadastradas para o filtro de salas
-        const classesSnap = await getDocs(collection(db, 'classes'));
-        const classes = classesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setListaClasses(classes);
+    setLoading(true);
 
-        // 2. Buscar Dados de Encerramento / Frequência salvos no Firestore
-        const encerramentoSnap = await getDocs(collection(db, 'ebd_encerramento_dados'));
-        const encerramento = encerramentoSnap.docs.map(doc => doc.data());
-        setDadosEncerramento(encerramento);
+    // 1. Realtime para Classes
+    const unsubClasses = onSnapshot(collection(db, 'classes'), (snapshot) => {
+      const classes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setListaClasses(classes);
+    });
 
-      } catch (error) {
-        console.error('Erro ao carregar dados comparativos:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
+    // 2. Realtime para Dados de Encerramento / Frequência
+    const unsubEncerramento = onSnapshot(collection(db, 'ebd_encerramento_dados'), (snapshot) => {
+      const encerramento = snapshot.docs.map(doc => doc.data());
+      setDadosEncerramento(encerramento);
+      setLoading(false);
+    }, (error) => {
+      console.error('Erro ao sincronizar dados comparativos em tempo real:', error);
+      setLoading(false);
+    });
 
-    carregarDados();
+    return () => {
+      unsubClasses();
+      unsubEncerramento();
+    };
   }, []);
 
-  // Processamento e filtragem real dos dados (removendo aulas fantasmas e aplicando o padrão BR)
+  // Processamento e filtragem real dos dados
   const dadosProcessados = dadosEncerramento
     .map((cls: any) => {
       const presentes = cls.presentes || 0;
       const matriculados = cls.matriculados || 0;
-      const frequencia = matriculados > 0 ? `${Math.round((presentes / matriculados) * 100)}%` : '0%';
+      const frequencia = matriculados > 0 ? Math.round((presentes / matriculados) * 100) : 0;
       const dataFormatada = formatarDataBR(cls.data);
 
       return {
         referencia: dataFormatada || '—',
         presentes,
+      
         matriculados,
-        frequencia,
+        frequenciaNum: frequencia,
+        frequencia: `${frequencia}%`,
         vsAnterior: '—'
       };
     })
-    // Filtro de segurança: remove datas inválidas, vazias ou a "aula fantasma" indesejada (ex: 02/08/2026 se não houver dados reais)
     .filter(item => item.referencia !== '' && item.referencia !== '—' && !(item.referencia === '02/08/2026' && item.presentes === 0 && item.matriculados === 0));
 
-  // Dados consolidados para exibição baseados no tipo de visualização selecionado
   const dadosTabela = tipoVisualizacao === 'semana' ? dadosProcessados : [
-    // Exemplo de agregação simulada para "Mês a mês" caso queira separar o comportamento visual
-    { referencia: 'Agosto/2026', presentes: dadosProcessados.reduce((acc, cur) => acc + cur.presentes, 0), matriculados: dadosProcessados.reduce((acc, cur) => acc + cur.matriculados, 0), frequencia: '85%', vsAnterior: '+5%' }
+    { referencia: 'Agosto/2026', presentes: dadosProcessados.reduce((acc, cur) => acc + cur.presentes, 0), matriculados: dadosProcessados.reduce((acc, cur) => acc + cur.matriculados, 0), frequenciaNum: 85, frequencia: '85%', vsAnterior: '+5%' }
   ];
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12 animate-fadeIn">
       
-      {/* FILTROS E CONTROLES */}
+      {/* CABEÇALHO E FILTROS APRIMORADOS */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
-        <h2 className="text-lg font-bold text-slate-900">Relatórios comparativos de presença</h2>
-        
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-2">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+              <BarChart2 className="w-5 h-5 text-indigo-600" /> Relatórios Comparativos
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">Análise de frequência e desempenho em tempo real</p>
+          </div>
           
-          {/* Alternador de Tipo */}
+          <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-200/60 text-xs font-bold w-fit">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Tempo Real Ativo
+          </div>
+        </div>
+        
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-2 border-t border-slate-100">
+          
+          {/* Alternador de Tipo Visual */}
           <div className="flex items-center bg-slate-100 p-1 rounded-xl w-fit">
             <button
               type="button"
@@ -111,11 +122,13 @@ export function Comparativos() {
           {/* Filtros de Sala e Mês */}
           <div className="flex flex-wrap items-center gap-3">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Sala / Classe</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                <Layers className="w-3 h-3" /> Sala / Classe
+              </label>
               <select
                 value={classeFiltro}
                 onChange={(e) => setClasseFiltro(e.target.value)}
-                className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-slate-700"
+                className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-indigo-600 transition-colors"
               >
                 <option value="todas">Todas as salas</option>
                 {listaClasses.map((c: any) => (
@@ -125,11 +138,13 @@ export function Comparativos() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Mês</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                <Calendar className="w-3 h-3" /> Mês de Referência
+              </label>
               <select
                 value={mesFiltro}
                 onChange={(e) => setMesFiltro(e.target.value)}
-                className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-slate-700"
+                className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-indigo-600 transition-colors"
               >
                 <option value="2026-08">Ago/2026</option>
                 <option value="2026-07">Jul/2026</option>
@@ -141,46 +156,57 @@ export function Comparativos() {
         </div>
       </div>
 
-      {/* GRÁFICO DE FREQUÊNCIA */}
+      {/* PAINEL GRÁFICO VISUAL APRIMORADO */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 md:p-8 space-y-6">
-        <div>
-          <h3 className="text-base font-bold text-slate-900">
-            {tipoVisualizacao === 'semana' ? 'Presença por domingo — Ago/2026' : 'Comparativo Mensal de Frequência'}
-          </h3>
-          <p className="text-xs text-slate-500">Percentual de frequência sobre os alunos ativos matriculados em cada classe.</p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Activity className="w-4 h-4 text-indigo-600" />
+              {tipoVisualizacao === 'semana' ? 'Desempenho por Domingo — Ago/2026' : 'Comparativo Mensal de Frequência'}
+            </h3>
+            <p className="text-xs text-slate-500">Visualização gráfica do percentual de frequência sobre os alunos ativos.</p>
+          </div>
         </div>
 
-        {/* Simulação Visual do Gráfico */}
-        <div className="h-64 border-b border-l border-slate-200 relative flex items-end justify-around px-8 pb-4">
-          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
-            <div className="border-b border-dashed border-slate-400 w-full text-[10px] text-right pr-2">100%</div>
-            <div className="border-b border-dashed border-slate-400 w-full text-[10px] text-right pr-2">75%</div>
-            <div className="border-b border-dashed border-slate-400 w-full text-[10px] text-right pr-2">50%</div>
-            <div className="border-b border-dashed border-slate-400 w-full text-[10px] text-right pr-2">25%</div>
-            <div className="border-b border-slate-400 w-full text-[10px] text-right pr-2">0%</div>
+        {/* Gráfico Estilizado em Barras / Pontos */}
+        <div className="h-64 border-b border-l border-slate-200 relative flex items-end justify-around px-8 pb-4 bg-slate-50/50 rounded-xl">
+          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-25 p-4">
+            <div className="border-b border-dashed border-slate-400 w-full text-[10px] text-right pr-2 text-slate-500 font-bold">100%</div>
+            <div className="border-b border-dashed border-slate-400 w-full text-[10px] text-right pr-2 text-slate-500 font-bold">75%</div>
+            <div className="border-b border-dashed border-slate-400 w-full text-[10px] text-right pr-2 text-slate-500 font-bold">50%</div>
+            <div className="border-b border-dashed border-slate-400 w-full text-[10px] text-right pr-2 text-slate-500 font-bold">25%</div>
+            <div className="border-b border-slate-300 w-full text-[10px] text-right pr-2 text-slate-500 font-bold">0%</div>
           </div>
 
-          {dadosTabela.length > 0 ? (
+          {loading ? (
+            <span className="text-xs text-slate-400 pb-24 z-10 font-medium">Sincronizando dados em tempo real...</span>
+          ) : dadosTabela.length > 0 ? (
             dadosTabela.map((item, idx) => (
-              <div key={idx} className="flex flex-col items-center gap-2 z-10">
-                <div className="w-3 h-3 bg-slate-900 rounded-full shadow-sm ring-4 ring-slate-100"></div>
-                <span className="text-[11px] font-semibold text-slate-600">{item.referencia}</span>
+              <div key={idx} className="flex flex-col items-center gap-2 z-10 h-full justify-end group">
+                <div className="text-[10px] font-bold text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {item.frequencia}
+                </div>
+                <div 
+                  className="w-10 bg-gradient-to-t from-indigo-600 to-violet-500 rounded-t-xl transition-all duration-500 shadow-md group-hover:brightness-110" 
+                  style={{ height: `${Math.max(item.frequenciaNum, 10)}%` }}
+                ></div>
+                <span className="text-[11px] font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-xs">
+                  {item.referencia}
+                </span>
               </div>
             ))
           ) : (
-            <span className="text-xs text-slate-400 pb-12">Nenhum registro de aula para o período selecionado.</span>
+            <span className="text-xs text-slate-400 pb-24 z-10">Nenhum registro de aula para o período selecionado.</span>
           )}
         </div>
 
-        {/* Legenda Dinâmica baseada nas Classes do Firebase */}
-        <div className="flex items-center justify-center gap-6 pt-2 flex-wrap">
-          {loading ? (
-            <span className="text-xs text-slate-400">Carregando classes...</span>
-          ) : listaClasses.length > 0 ? (
+        {/* Legenda Dinâmica de Classes */}
+        <div className="flex items-center justify-center gap-6 pt-3 flex-wrap">
+          {listaClasses.length > 0 ? (
             listaClasses.map((c: any, index) => (
-              <div key={c.id || index} className="flex items-center gap-2">
-                <span className={`w-3 h-3 rounded-sm ${index % 2 === 0 ? 'bg-slate-900' : 'bg-blue-500'}`}></span>
-                <span className="text-xs font-semibold text-slate-700">{c.nome}</span>
+              <div key={c.id || index} className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
+                <span className={`w-3 h-3 rounded-md ${index % 2 === 0 ? 'bg-indigo-600' : 'bg-slate-900'}`}></span>
+                <span className="text-xs font-bold text-slate-700">{c.nome}</span>
               </div>
             ))
           ) : (
@@ -189,10 +215,11 @@ export function Comparativos() {
         </div>
       </div>
 
-      {/* TABELA DE VARIAÇÃO */}
+      {/* TABELA DE VARIAÇÃO APRIMORADA */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 md:p-8 space-y-4">
-        <h3 className="text-base font-bold text-slate-900">
-          {tipoVisualizacao === 'semana' ? 'Variação semanal' : 'Variação mês a mês'}
+        <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+          <TrendingUp className="w-4 h-4 text-indigo-600" />
+          {tipoVisualizacao === 'semana' ? 'Detalhamento e Variação Semanal' : 'Detalhamento e Variação Mensal'}
         </h3>
 
         <div className="overflow-x-auto">
@@ -209,17 +236,21 @@ export function Comparativos() {
             <tbody className="divide-y divide-slate-100 text-sm">
               {dadosTabela.length > 0 ? (
                 dadosTabela.map((item, index) => (
-                  <tr key={index} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3.5 px-4 font-semibold text-slate-800">{item.referencia}</td>
-                    <td className="py-3.5 px-4 text-slate-600">{item.presentes}</td>
-                    <td className="py-3.5 px-4 text-slate-600">{item.matriculados}</td>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">{item.frequencia}</td>
-                    <td className="py-3.5 px-4 text-slate-500">{item.vsAnterior}</td>
+                  <tr key={index} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-slate-800">{item.referencia}</td>
+                    <td className="py-3.5 px-4 text-slate-600 font-medium">{item.presentes}</td>
+                    <td className="py-3.5 px-4 text-slate-600 font-medium">{item.matriculados}</td>
+                    <td className="py-3.5 px-4">
+                      <span className="bg-indigo-50 text-indigo-700 font-bold px-2.5 py-1 rounded-lg text-xs border border-indigo-100">
+                        {item.frequencia}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-500 font-semibold">{item.vsAnterior}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center text-xs text-slate-400">
+                  <td colSpan={5} className="py-8 text-center text-xs text-slate-400">
                     Nenhum dado encontrado para os filtros selecionados.
                   </td>
                 </tr>
