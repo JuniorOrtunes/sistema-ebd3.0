@@ -137,12 +137,17 @@ export function Encerramento() {
         checarEInserirData(aluno.dataCasamento, 'Casamento', aluno.id, nome, classe);
       });
 
-      function checarEInserirData(dataStr: string, tipo: 'Nascimento' | 'Casamento', id: string, nome: string, classe: string) {
-        if (!dataStr || typeof dataStr !== 'string') return;
+  function checarEInserirData(dataStr: string, tipo: 'Nascimento' | 'Casamento', id: string, nome: string, classe: string) {
+   if (!dataStr || typeof dataStr !== 'string') return;
+  
+  // LOG DE DEBUG: Vamos ver o que o sistema está lendo para cada aluno
+  console.log(`Debug Aluno: ${nome} | Tipo: ${tipo} | Data Lida: "${dataStr}"`);
 
-        let mes: number | null = null;
-        let dia: number | null = null;
-        const limpa = dataStr.trim();
+  let mes: number | null = null;
+  let dia: number | null = null;
+  const limpa = dataStr.trim();
+  
+  // ... (resto da lógica de parser que já está lá)
 
         // Tenta formatos comuns: YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, etc.
         if (limpa.includes('-')) {
