@@ -346,10 +346,10 @@ export function Alunos() {
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
 
   return (
-    <div className="p-4 md:p-8 space-y-6 bg-gray-50 min-h-screen flex flex-col relative">
+    <div className="h-screen overflow-hidden p-4 md:p-8 flex flex-col bg-gray-50">
       
-      {/* Bloco Superior FIXO com Fundo Sólido Opaco e Camada de Alta Prioridade (z-50) */}
-      <div className="sticky top-0 z-50 bg-gray-50/95 backdrop-blur-md pb-4 pt-2 shadow-md space-y-4 border-b border-gray-200 -mx-4 px-4 md:-mx-8 md:px-8">
+      {/* Bloco Superior FIXO Absoluto (Não rola de jeito nenhum) */}
+      <div className="flex-none bg-gray-50 pb-4 space-y-4 z-50">
         
         <div className="flex items-center justify-between pt-1">
           <h1 className="text-xl font-bold text-gray-900">
@@ -601,8 +601,8 @@ export function Alunos() {
 
       </div>
 
-      {/* Seção Inferior: Tabela de listagem isolada para rolar perfeitamente por baixo */}
-      <div className="pt-4 pb-8 relative z-0">
+      {/* Seção Inferior: Container com scroll próprio isolado (A lista roda APENAS aqui dentro) */}
+      <div className="flex-1 overflow-y-auto pt-4 pb-8 min-h-0">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-12 text-gray-500 text-sm gap-2">
@@ -612,8 +612,8 @@ export function Alunos() {
           ) : alunosFiltrados.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-50/70 border-b border-gray-100 text-xs font-semibold text-gray-600 tracking-wider">
+                <thead className="sticky top-0 bg-gray-50 border-b border-gray-100 z-10">
+                  <tr className="text-xs font-semibold text-gray-600 tracking-wider">
                     <th className="p-4">Nome</th>
                     <th className="p-4">Classe</th>
                     <th className="p-4">Telefone</th>
