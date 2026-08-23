@@ -347,8 +347,9 @@ export function Alunos() {
   return (
     <div className="p-4 md:p-8 space-y-6 bg-gray-50/50 min-h-screen">
       
-      {/* Container Superior Fixo (Sticky Header contendo Título + Formulário) */}
-      <div className="sticky top-0 z-30 bg-gray-50/95 backdrop-blur-md pt-2 pb-4 space-y-4 border-b border-gray-200/60">
+      {/* Container Superior Fixo (Título + Formulário + Filtros com fundo sólido e opaco) */}
+      <div className="sticky top-0 z-30 bg-gray-50 shadow-sm pt-2 pb-4 space-y-4 border-b border-gray-200">
+        
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-gray-900">
             {editandoId ? 'Editar Aluno / Cadastro' : 'Alunos e Corpo Docente'}
@@ -543,11 +544,9 @@ export function Alunos() {
             )}
           </div>
         </form>
-      </div>
 
-      {/* Seção inferior: Filtros e Tabela (rolam livremente abaixo do cabeçalho fixo) */}
-      <div className="space-y-4 pt-2">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Filtros agora integrados e fixos no topo junto com o formulário */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
           
           <div className="space-y-1">
             <label className="text-xs font-semibold text-gray-600 tracking-wider">FILTRAR POR CLASSE</label>
@@ -599,7 +598,10 @@ export function Alunos() {
 
         </div>
 
-        {/* Tabela */}
+      </div>
+
+      {/* Seção inferior: Apenas a Tabela rola livremente abaixo */}
+      <div className="pt-2">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-12 text-gray-500 text-sm gap-2">
@@ -695,6 +697,7 @@ export function Alunos() {
           )}
         </div>
       </div>
+
     </div>
   );
 }
