@@ -353,8 +353,8 @@ export function Alunos() {
         </h1>
       </div>
 
-      {/* Formulário de Cadastro / Edição */}
-      <form onSubmit={handleSalvar} className={`bg-white p-6 rounded-2xl border shadow-sm space-y-5 transition-all ${editandoId ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-100'}`}>
+      {/* Formulário de Cadastro / Edição com comportamento Sticky */}
+      <form onSubmit={handleSalvar} className={`bg-white p-6 rounded-2xl border shadow-md space-y-5 transition-all sticky top-4 z-20 ${editandoId ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-100'}`}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="lg:col-span-2 space-y-1">
             <label className="text-xs font-semibold text-gray-600 tracking-wider">NOME *</label>
