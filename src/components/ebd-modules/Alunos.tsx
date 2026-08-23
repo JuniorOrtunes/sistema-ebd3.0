@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ALUNOS_INICIAIS, type Aluno } from '../../lib/ebd';
-import { UserPlus, Search, ChevronDown, Edit2, X, Calendar, MapPin, Loader2, Trash2, Power, Shield } from 'lucide-react';
+import { UserPlus, Search, ChevronDown, Edit2, X, Calendar, MapPin, Loader2, Trash2, Power, Shield, Eye } from 'lucide-react';
 import { db } from '../../firebase'; 
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
@@ -21,6 +21,8 @@ export function Alunos() {
   const [busca, setBusca] = useState('');
 
   const [classesDisponiveis, setClassesDisponiveis] = useState<ClassItem[]>([]);
+  const [selectedAlunoId, setSelectedAlunoId] = useState<string | null>(null);
+  const [modoConferencia, setModoConferencia] = useState(false);
 
   // Carregar Classes do Firestore ou localStorage
   useEffect(() => {
@@ -85,7 +87,7 @@ export function Alunos() {
         });
       }
 
-      // 3. Cruzamento inteligente por correspondência (verifica igualdade ou inclusão parcial de nomes)
+      // 3. Cruzamento inteligente por correspondência
       listaAlunos = listaAlunos.map(aluno => {
         const nomeAluno = aluno.nome?.trim().toLowerCase() || '';
         
@@ -157,6 +159,7 @@ export function Alunos() {
   const mascaraCep = (v: string) => v.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2').slice(0, 9);
 
   const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    if (modoConferencia) return;
     const cepLimpo = e.target.value.replace(/\D/g, '');
     if (cepLimpo.length !== 8) return;
 
@@ -179,6 +182,7 @@ export function Alunos() {
 
   const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (modoConferencia) return;
     if (!nome.trim()) {
       alert('O nome do aluno é obrigatório.');
       return;
@@ -259,6 +263,8 @@ export function Alunos() {
   };
 
   const handleEditar = (aluno: Aluno) => {
+    setModoConferencia(false);
+    setSelectedAlunoId(aluno.id);
     setEditandoId(aluno.id);
     setNome(aluno.nome || '');
     setClasse(aluno.classe || aluno.turma || 'Sem Classe');
@@ -274,6 +280,26 @@ export function Alunos() {
     setEProfessor(aluno.eProfessor || false);
     setClasseLeciona(aluno.classeLeciona || 'Selecione uma classe');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Pré-visualização ao clicar na linha
+  const handleSelecionarParaConferencia = (aluno: Aluno) => {
+    setSelectedAlunoId(aluno.id);
+    setModoConferencia(true);
+    setEditandoId(null);
+    setNome(aluno.nome || '');
+    setClasse(aluno.classe || aluno.turma || 'Sem Classe');
+    setNascimento(aluno.nascimento || '');
+    setCasamento(aluno.casamento || '');
+    setTelefone(aluno.telefone || '');
+    setCep(aluno.cep || '');
+    setRua(aluno.rua || '');
+    setNumero(aluno.numero || '');
+    setComplemento(aluno.complemento || '');
+    setBairro(aluno.bairro || '');
+    setCidade(aluno.cidade || '');
+    setEProfessor(aluno.eProfessor || false);
+    setClasseLeciona(aluno.classeLeciona || 'Selecione uma classe');
   };
 
   const handleAlternarStatus = async (id: string, situacaoAtual: string) => {
@@ -302,6 +328,9 @@ export function Alunos() {
           await deleteDoc(doc(db, 'alunos', id));
         }
         setAlunos(prev => prev.filter(a => a.id !== id));
+        if (selectedAlunoId === id) {
+          limparFormulario();
+        }
       } catch (error) {
         console.error('Erro ao excluir:', error);
         alert('Erro ao excluir registro.');
@@ -310,6 +339,8 @@ export function Alunos() {
   };
 
   const limparFormulario = () => {
+    setSelectedAlunoId(null);
+    setModoConferencia(false);
     setEditandoId(null);
     setNome('');
     setClasse('Sem Classe');
@@ -348,199 +379,232 @@ export function Alunos() {
   return (
     <div className="h-screen overflow-hidden p-4 md:p-8 flex flex-col bg-gray-50">
       
-      {/* Bloco Superior FIXO Absoluto (Não rola de jeito nenhum) */}
+      {/* Bloco Superior FIXO Absoluto */}
       <div className="flex-none bg-gray-50 pb-4 space-y-4 z-50">
         
         <div className="flex items-center justify-between pt-1">
-          <h1 className="text-xl font-bold text-gray-900">
-            {editandoId ? 'Editar Aluno / Cadastro' : 'Alunos e Corpo Docente'}
+          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            {editandoId ? 'Editar Aluno / Cadastro' : modoConferencia ? 'Conferência de Dados (Modo Leitura)' : 'Alunos e Corpo Docente'}
+            {modoConferencia && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
+                <Eye className="w-3 h-3" /> Visualizando Linha
+              </span>
+            )}
           </h1>
         </div>
 
-        {/* Formulário de Cadastro / Edição */}
-        <form onSubmit={handleSalvar} className={`bg-white p-6 rounded-2xl border shadow-sm space-y-5 transition-all ${editandoId ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-100'}`}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="lg:col-span-2 space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider">NOME *</label>
-              <input 
-                type="text" 
-                required
-                value={nome}
-                onChange={e => setNome(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider">CLASSE</label>
-              <div className="relative">
-                <select 
-                  value={classe}
-                  onChange={e => setClasse(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white appearance-none cursor-pointer"
-                >
-                  <option value="Sem Classe">Sem Classe</option>
-                  {classesDisponiveis.map(c => (
-                    <option key={c.id} value={c.nome}>{c.nome}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        {/* Formulário de Cadastro / Edição / Conferência */}
+        <form 
+          onSubmit={handleSalvar} 
+          className={`bg-white p-6 rounded-2xl border shadow-sm space-y-5 transition-all ${
+            editandoId 
+              ? 'border-indigo-300 ring-2 ring-indigo-100' 
+              : modoConferencia 
+              ? 'border-blue-300 ring-2 ring-blue-100 bg-blue-50/10' 
+              : 'border-gray-100'
+          }`}
+        >
+          <fieldset disabled={modoConferencia} className="space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="lg:col-span-2 space-y-1">
+                <label className="text-xs font-semibold text-gray-600 tracking-wider">NOME *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={nome}
+                  onChange={e => setNome(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white'}`}
+                />
               </div>
-            </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-indigo-500" /> NASCIMENTO
-              </label>
-              <input 
-                type="date" 
-                value={nascimento}
-                onChange={e => setNascimento(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white cursor-pointer"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-indigo-500" /> CASAMENTO
-              </label>
-              <input 
-                type="date" 
-                value={casamento}
-                onChange={e => setCasamento(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white cursor-pointer"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pt-2">
-            <div className="space-y-1 lg:col-span-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider">TELEFONE</label>
-              <input 
-                type="text" 
-                placeholder="(00) 00000-0000"
-                value={telefone}
-                onChange={e => setTelefone(mascaraTelefone(e.target.value))}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-indigo-500" /> CEP {buscandoCep && <Loader2 className="w-3 h-3 animate-spin text-indigo-600" />}
-              </label>
-              <input 
-                type="text" 
-                placeholder="00000-000"
-                value={cep}
-                onChange={e => setCep(mascaraCep(e.target.value))}
-                onBlur={handleCepBlur}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
-              />
-            </div>
-
-            <div className="space-y-1 lg:col-span-2">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider">RUA</label>
-              <input 
-                type="text" 
-                value={rua}
-                onChange={e => setRua(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider">NÚMERO</label>
-              <input 
-                type="text" 
-                value={numero}
-                onChange={e => setNumero(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider">COMPLEMENTO</label>
-              <input 
-                type="text" 
-                value={complemento}
-                onChange={e => setComplemento(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider">BAIRRO</label>
-              <input 
-                type="text" 
-                value={bairro}
-                onChange={e => setBairro(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider">CIDADE</label>
-              <input 
-                type="text" 
-                value={cidade}
-                onChange={e => setCidade(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
-              />
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/70 space-y-3">
-            <div className="flex items-center gap-3">
-              <input 
-                type="checkbox" 
-                id="profCheck"
-                checked={eProfessor}
-                onChange={e => setEProfessor(e.target.checked)}
-                className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
-              />
-              <label htmlFor="profCheck" className="text-sm font-semibold text-gray-800 cursor-pointer">
-                É professor(a)?
-              </label>
-            </div>
-
-            {eProfessor && (
-              <div className="space-y-1 pt-2">
-                <label className="text-xs font-semibold text-gray-600 tracking-wider">CLASSE QUE LECIONA</label>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-600 tracking-wider">CLASSE</label>
                 <div className="relative">
                   <select 
-                    value={classeLeciona}
-                    onChange={e => setClasseLeciona(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white appearance-none cursor-pointer"
+                    value={classe}
+                    onChange={e => setClasse(e.target.value)}
+                    disabled={modoConferencia}
+                    className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm appearance-none ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white cursor-pointer'}`}
                   >
-                    <option value="Selecione uma classe">Selecione uma classe</option>
+                    <option value="Sem Classe">Sem Classe</option>
                     {classesDisponiveis.map(c => (
                       <option key={c.id} value={c.nome}>{c.nome}</option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  {!modoConferencia && <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />}
                 </div>
               </div>
-            )}
-          </div>
 
-          <div className="flex items-center gap-3">
-            <button 
-              type="submit"
-              className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm flex items-center gap-2"
-            >
-              <UserPlus className="w-4 h-4" />
-              {editandoId ? 'Salvar Alterações' : 'Salvar'}
-            </button>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-600 tracking-wider flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-indigo-500" /> NASCIMENTO
+                </label>
+                <input 
+                  type="date" 
+                  value={nascimento}
+                  onChange={e => setNascimento(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white cursor-pointer'}`}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-600 tracking-wider flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-indigo-500" /> CASAMENTO
+                </label>
+                <input 
+                  type="date" 
+                  value={casamento}
+                  onChange={e => setCasamento(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white cursor-pointer'}`}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pt-2">
+              <div className="space-y-1 lg:col-span-1">
+                <label className="text-xs font-semibold text-gray-600 tracking-wider">TELEFONE</label>
+                <input 
+                  type="text" 
+                  placeholder="(00) 00000-0000"
+                  value={telefone}
+                  onChange={e => setTelefone(mascaraTelefone(e.target.value))}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white'}`}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-600 tracking-wider flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-indigo-500" /> CEP {buscandoCep && <Loader2 className="w-3 h-3 animate-spin text-indigo-600" />}
+                </label>
+                <input 
+                  type="text" 
+                  placeholder="00000-000"
+                  value={cep}
+                  onChange={e => setCep(mascaraCep(e.target.value))}
+                  onBlur={handleCepBlur}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white'}`}
+                />
+              </div>
+
+              <div className="space-y-1 lg:col-span-2">
+                <label className="text-xs font-semibold text-gray-600 tracking-wider">RUA</label>
+                <input 
+                  type="text" 
+                  value={rua}
+                  onChange={e => setRua(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white'}`}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-600 tracking-wider">NÚMERO</label>
+                <input 
+                  type="text" 
+                  value={numero}
+                  onChange={e => setNumero(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white'}`}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-600 tracking-wider">COMPLEMENTO</label>
+                <input 
+                  type="text" 
+                  value={complemento}
+                  onChange={e => setComplemento(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white'}`}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-600 tracking-wider">BAIRRO</label>
+                <input 
+                  type="text" 
+                  value={bairro}
+                  onChange={e => setBairro(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white'}`}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-600 tracking-wider">CIDADE</label>
+                <input 
+                  type="text" 
+                  value={cidade}
+                  onChange={e => setCidade(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white'}`}
+                />
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/70 space-y-3">
+              <div className="flex items-center gap-3">
+                <input 
+                  type="checkbox" 
+                  id="profCheck"
+                  checked={eProfessor}
+                  onChange={e => setEProfessor(e.target.checked)}
+                  disabled={modoConferencia}
+                  className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                />
+                <label htmlFor="profCheck" className="text-sm font-semibold text-gray-800 cursor-pointer">
+                  É professor(a)?
+                </label>
+              </div>
+
+              {eProfessor && (
+                <div className="space-y-1 pt-2">
+                  <label className="text-xs font-semibold text-gray-600 tracking-wider">CLASSE QUE LECIONA</label>
+                  <div className="relative">
+                    <select 
+                      value={classeLeciona}
+                      onChange={e => setClasseLeciona(e.target.value)}
+                      disabled={modoConferencia}
+                      className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm appearance-none ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white cursor-pointer'}`}
+                    >
+                      <option value="Selecione uma classe">Selecione uma classe</option>
+                      {classesDisponiveis.map(c => (
+                        <option key={c.id} value={c.nome}>{c.nome}</option>
+                      ))}
+                    </select>
+                    {!modoConferencia && <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />}
+                  </div>
+                </div>
+              )}
+            </div>
+          </fieldset>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            {!modoConferencia ? (
+              <button 
+                type="submit"
+                className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm flex items-center gap-2"
+              >
+                <UserPlus className="w-4 h-4" />
+                {editandoId ? 'Salvar Alterações' : 'Salvar'}
+              </button>
+            ) : (
+              <button 
+                type="button"
+                onClick={() => {
+                  const alunoAtual = alunos.find(a => a.id === selectedAlunoId);
+                  if (alunoAtual) handleEditar(alunoAtual);
+                }}
+                className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2"
+              >
+                <Edit2 className="w-4 h-4" />
+                Editar Este Registro Agora
+              </button>
+            )}
             
-            {editandoId && (
+            {(editandoId || modoConferencia) && (
               <button 
                 type="button"
                 onClick={limparFormulario}
                 className="px-5 py-2.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-sm font-medium hover:bg-rose-100 transition-all shadow-sm flex items-center gap-2"
               >
                 <X className="w-4 h-4" />
-                Cancelar Edição
+                {modoConferencia ? 'Cancelar Seleção / Novo Cadastro' : 'Cancelar Edição'}
               </button>
             )}
           </div>
@@ -601,7 +665,7 @@ export function Alunos() {
 
       </div>
 
-      {/* Seção Inferior: Container com scroll próprio isolado (A lista roda APENAS aqui dentro) */}
+      {/* Seção Inferior: Container com scroll próprio isolado */}
       <div className="flex-1 overflow-y-auto pt-4 pb-8 min-h-0">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           {loading ? (
@@ -625,8 +689,18 @@ export function Alunos() {
                   {alunosFiltrados.map((a) => {
                     const situacaoTexto = a.situacao || (a.ativo ? 'Ativo' : 'Inativo');
                     const isSup = (a as any).eSuperintendente;
+                    const isSelected = selectedAlunoId === a.id;
                     return (
-                      <tr key={a.id} className="hover:bg-gray-50/50 transition-colors">
+                      <tr 
+                        key={a.id} 
+                        onClick={() => handleSelecionarParaConferencia(a)}
+                        className={`cursor-pointer transition-colors ${
+                          isSelected 
+                            ? 'bg-blue-50/80 border-l-4 border-blue-500 shadow-sm' 
+                            : 'hover:bg-gray-50/70'
+                        }`}
+                        title="Clique para conferir os dados rapidamente"
+                      >
                         <td className="p-4 font-medium text-gray-900 flex items-center gap-2 flex-wrap">
                           {a.nome}
                           {isSup && (
@@ -651,7 +725,7 @@ export function Alunos() {
                             {situacaoTexto}
                           </span>
                         </td>
-                        <td className="p-4 text-right">
+                        <td className="p-4 text-right" onClick={e => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-2">
                             <button 
                               onClick={() => handleAlternarStatus(a.id, situacaoTexto)}
