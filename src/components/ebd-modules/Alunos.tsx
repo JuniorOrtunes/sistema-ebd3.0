@@ -85,7 +85,7 @@ export function Alunos() {
         });
       }
 
-      // 3. Cruzamento inteligente por correspondência (verifica igualdade ou inclusão parcial de nomes)
+      // 3. Cruzamento inteligente por correspondência
       listaAlunos = listaAlunos.map(aluno => {
         const nomeAluno = aluno.nome?.trim().toLowerCase() || '';
         
@@ -326,7 +326,6 @@ export function Alunos() {
     setClasseLeciona('Selecione uma classe');
   };
 
-  // Filtro atualizado considerando as flags de superintendente e professor
   const alunosFiltrados = alunos
     .filter(a => {
       const matchBusca = a.nome?.toLowerCase().includes(busca.toLowerCase());
@@ -347,170 +346,38 @@ export function Alunos() {
 
   return (
     <div className="p-4 md:p-8 space-y-6 bg-gray-50/50 min-h-screen">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">
-          {editandoId ? 'Editar Aluno / Cadastro' : 'Alunos e Corpo Docente'}
-        </h1>
-      </div>
+      
+      {/* Container Superior Fixo (Sticky Header contendo Título + Formulário) */}
+      <div className="sticky top-0 z-30 bg-gray-50/95 backdrop-blur-md pt-2 pb-4 space-y-4 border-b border-gray-200/60">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold text-gray-900">
+            {editandoId ? 'Editar Aluno / Cadastro' : 'Alunos e Corpo Docente'}
+          </h1>
+        </div>
 
-      {/* Formulário de Cadastro / Edição com comportamento Sticky */}
-      <form onSubmit={handleSalvar} className={`bg-white p-6 rounded-2xl border shadow-md space-y-5 transition-all sticky top-4 z-20 ${editandoId ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-100'}`}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="lg:col-span-2 space-y-1">
-            <label className="text-xs font-semibold text-gray-600 tracking-wider">NOME *</label>
-            <input 
-              type="text" 
-              required
-              value={nome}
-              onChange={e => setNome(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-600 tracking-wider">CLASSE</label>
-            <div className="relative">
-              <select 
-                value={classe}
-                onChange={e => setClasse(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white appearance-none cursor-pointer"
-              >
-                <option value="Sem Classe">Sem Classe</option>
-                {classesDisponiveis.map(c => (
-                  <option key={c.id} value={c.nome}>{c.nome}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        {/* Formulário de Cadastro / Edição */}
+        <form onSubmit={handleSalvar} className={`bg-white p-6 rounded-2xl border shadow-md space-y-5 transition-all ${editandoId ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-100'}`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="lg:col-span-2 space-y-1">
+              <label className="text-xs font-semibold text-gray-600 tracking-wider">NOME *</label>
+              <input 
+                type="text" 
+                required
+                value={nome}
+                onChange={e => setNome(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
+              />
             </div>
-          </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-600 tracking-wider flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-indigo-500" /> NASCIMENTO
-            </label>
-            <input 
-              type="date" 
-              value={nascimento}
-              onChange={e => setNascimento(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white cursor-pointer"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-600 tracking-wider flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-indigo-500" /> CASAMENTO
-            </label>
-            <input 
-              type="date" 
-              value={casamento}
-              onChange={e => setCasamento(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white cursor-pointer"
-            />
-          </div>
-        </div>
-
-        {/* Demais campos de endereço e contato */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pt-2">
-          <div className="space-y-1 lg:col-span-1">
-            <label className="text-xs font-semibold text-gray-600 tracking-wider">TELEFONE</label>
-            <input 
-              type="text" 
-              placeholder="(00) 00000-0000"
-              value={telefone}
-              onChange={e => setTelefone(mascaraTelefone(e.target.value))}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-600 tracking-wider flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-indigo-500" /> CEP {buscandoCep && <Loader2 className="w-3 h-3 animate-spin text-indigo-600" />}
-            </label>
-            <input 
-              type="text" 
-              placeholder="00000-000"
-              value={cep}
-              onChange={e => setCep(mascaraCep(e.target.value))}
-              onBlur={handleCepBlur}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
-            />
-          </div>
-
-          <div className="space-y-1 lg:col-span-2">
-            <label className="text-xs font-semibold text-gray-600 tracking-wider">RUA</label>
-            <input 
-              type="text" 
-              value={rua}
-              onChange={e => setRua(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-600 tracking-wider">NÚMERO</label>
-            <input 
-              type="text" 
-              value={numero}
-              onChange={e => setNumero(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-600 tracking-wider">COMPLEMENTO</label>
-            <input 
-              type="text" 
-              value={complemento}
-              onChange={e => setComplemento(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-600 tracking-wider">BAIRRO</label>
-            <input 
-              type="text" 
-              value={bairro}
-              onChange={e => setBairro(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-600 tracking-wider">CIDADE</label>
-            <input 
-              type="text" 
-              value={cidade}
-              onChange={e => setCidade(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
-            />
-          </div>
-        </div>
-
-        <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/70 space-y-3">
-          <div className="flex items-center gap-3">
-            <input 
-              type="checkbox" 
-              id="profCheck"
-              checked={eProfessor}
-              onChange={e => setEProfessor(e.target.checked)}
-              className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
-            />
-            <label htmlFor="profCheck" className="text-sm font-semibold text-gray-800 cursor-pointer">
-              É professor(a)?
-            </label>
-          </div>
-
-          {eProfessor && (
-            <div className="space-y-1 pt-2">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider">CLASSE QUE LECIONA</label>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 tracking-wider">CLASSE</label>
               <div className="relative">
                 <select 
-                  value={classeLeciona}
-                  onChange={e => setClasseLeciona(e.target.value)}
+                  value={classe}
+                  onChange={e => setClasse(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white appearance-none cursor-pointer"
                 >
-                  <option value="Selecione uma classe">Selecione uma classe</option>
+                  <option value="Sem Classe">Sem Classe</option>
                   {classesDisponiveis.map(c => (
                     <option key={c.id} value={c.nome}>{c.nome}</option>
                   ))}
@@ -518,36 +385,170 @@ export function Alunos() {
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-          )}
-        </div>
 
-        <div className="flex items-center gap-3">
-          <button 
-            type="submit"
-            className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm flex items-center gap-2"
-          >
-            <UserPlus className="w-4 h-4" />
-            {editandoId ? 'Salvar Alterações' : 'Salvar'}
-          </button>
-          
-          {editandoId && (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 tracking-wider flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-indigo-500" /> NASCIMENTO
+              </label>
+              <input 
+                type="date" 
+                value={nascimento}
+                onChange={e => setNascimento(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white cursor-pointer"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 tracking-wider flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-indigo-500" /> CASAMENTO
+              </label>
+              <input 
+                type="date" 
+                value={casamento}
+                onChange={e => setCasamento(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white cursor-pointer"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pt-2">
+            <div className="space-y-1 lg:col-span-1">
+              <label className="text-xs font-semibold text-gray-600 tracking-wider">TELEFONE</label>
+              <input 
+                type="text" 
+                placeholder="(00) 00000-0000"
+                value={telefone}
+                onChange={e => setTelefone(mascaraTelefone(e.target.value))}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 tracking-wider flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-indigo-500" /> CEP {buscandoCep && <Loader2 className="w-3 h-3 animate-spin text-indigo-600" />}
+              </label>
+              <input 
+                type="text" 
+                placeholder="00000-000"
+                value={cep}
+                onChange={e => setCep(mascaraCep(e.target.value))}
+                onBlur={handleCepBlur}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
+              />
+            </div>
+
+            <div className="space-y-1 lg:col-span-2">
+              <label className="text-xs font-semibold text-gray-600 tracking-wider">RUA</label>
+              <input 
+                type="text" 
+                value={rua}
+                onChange={e => setRua(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 tracking-wider">NÚMERO</label>
+              <input 
+                type="text" 
+                value={numero}
+                onChange={e => setNumero(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 tracking-wider">COMPLEMENTO</label>
+              <input 
+                type="text" 
+                value={complemento}
+                onChange={e => setComplemento(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 tracking-wider">BAIRRO</label>
+              <input 
+                type="text" 
+                value={bairro}
+                onChange={e => setBairro(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 tracking-wider">CIDADE</label>
+              <input 
+                type="text" 
+                value={cidade}
+                onChange={e => setCidade(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white"
+              />
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/70 space-y-3">
+            <div className="flex items-center gap-3">
+              <input 
+                type="checkbox" 
+                id="profCheck"
+                checked={eProfessor}
+                onChange={e => setEProfessor(e.target.checked)}
+                className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+              />
+              <label htmlFor="profCheck" className="text-sm font-semibold text-gray-800 cursor-pointer">
+                É professor(a)?
+              </label>
+            </div>
+
+            {eProfessor && (
+              <div className="space-y-1 pt-2">
+                <label className="text-xs font-semibold text-gray-600 tracking-wider">CLASSE QUE LECIONA</label>
+                <div className="relative">
+                  <select 
+                    value={classeLeciona}
+                    onChange={e => setClasseLeciona(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm bg-white appearance-none cursor-pointer"
+                  >
+                    <option value="Selecione uma classe">Selecione uma classe</option>
+                    {classesDisponiveis.map(c => (
+                      <option key={c.id} value={c.nome}>{c.nome}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
             <button 
-              type="button"
-              onClick={limparFormulario}
-              className="px-5 py-2.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-sm font-medium hover:bg-rose-100 transition-all shadow-sm flex items-center gap-2"
+              type="submit"
+              className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm flex items-center gap-2"
             >
-              <X className="w-4 h-4" />
-              Cancelar Edição
+              <UserPlus className="w-4 h-4" />
+              {editandoId ? 'Salvar Alterações' : 'Salvar'}
             </button>
-          )}
-        </div>
-      </form>
+            
+            {editandoId && (
+              <button 
+                type="button"
+                onClick={limparFormulario}
+                className="px-5 py-2.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-sm font-medium hover:bg-rose-100 transition-all shadow-sm flex items-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                Cancelar Edição
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
 
-      {/* Filtros e Busca */}
+      {/* Seção inferior: Filtros e Tabela (rolam livremente abaixo do cabeçalho fixo) */}
       <div className="space-y-4 pt-2">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           
-          {/* Filtro por Classe */}
           <div className="space-y-1">
             <label className="text-xs font-semibold text-gray-600 tracking-wider">FILTRAR POR CLASSE</label>
             <div className="relative">
@@ -565,7 +566,6 @@ export function Alunos() {
             </div>
           </div>
 
-          {/* Filtro por Tipo de Perfil */}
           <div className="space-y-1">
             <label className="text-xs font-semibold text-gray-600 tracking-wider">TIPO DE PERFIL</label>
             <div className="relative">
@@ -583,7 +583,6 @@ export function Alunos() {
             </div>
           </div>
 
-          {/* Buscar Nome */}
           <div className="space-y-1">
             <label className="text-xs font-semibold text-gray-600 tracking-wider">BUSCAR NOME</label>
             <div className="relative">
