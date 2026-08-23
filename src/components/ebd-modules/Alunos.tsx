@@ -588,7 +588,10 @@ export function Alunos() {
                 type="button"
                 onClick={() => {
                   const alunoAtual = alunos.find(a => a.id === selectedAlunoId);
-                  if (alunoAtual) handleEditar(alunoAtual);
+                  if (alunoAtual) {
+                    setModoConferencia(false);
+                    handleEditar(alunoAtual);
+                  }
                 }}
                 className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2"
               >
