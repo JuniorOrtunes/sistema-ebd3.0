@@ -583,7 +583,7 @@ export function Alunos() {
                 <UserPlus className="w-4 h-4" />
                 {editandoId ? 'Salvar Alterações' : 'Salvar'}
               </button>
-            ) : (
+          ) : (
               <button 
                 type="button"
                 onClick={() => {
