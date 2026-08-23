@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ALUNOS_INICIAIS, type Aluno } from '../../lib/ebd';
-import { UserPlus, Search, ChevronDown, Edit2, X, Calendar, MapPin, Loader2, Trash2, Power, Shield, Eye } from 'lucide-react';
+import { Search, ChevronDown, Edit2, X, Calendar, MapPin, Loader2, Trash2, Power, Shield, Eye } from 'lucide-react';
 import { db } from '../../firebase'; 
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
@@ -574,23 +574,37 @@ export function Alunos() {
             </div>
           </fieldset>
 
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap pt-2">
             {!modoConferencia ? (
               <button 
                 type="submit"
                 className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm flex items-center gap-2"
               >
-                <UserPlus className="w-4 h-4" />
                 {editandoId ? 'Salvar Alterações' : 'Salvar'}
               </button>
-          ) : (
+            ) : (
               <button 
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   const alunoAtual = alunos.find(a => a.id === selectedAlunoId);
                   if (alunoAtual) {
                     setModoConferencia(false);
-                    handleEditar(alunoAtual);
+                    setEditandoId(alunoAtual.id);
+                    setNome(alunoAtual.nome || '');
+                    setClasse(alunoAtual.classe || alunoAtual.turma || 'Sem Classe');
+                    setNascimento(alunoAtual.nascimento || '');
+                    setCasamento(alunoAtual.casamento || '');
+                    setTelefone(alunoAtual.telefone || '');
+                    setCep(alunoAtual.cep || '');
+                    setRua(alunoAtual.rua || '');
+                    setNumero(alunoAtual.numero || '');
+                    setComplemento(alunoAtual.complemento || '');
+                    setBairro(alunoAtual.bairro || '');
+                    setCidade(alunoAtual.cidade || '');
+                    setEProfessor(alunoAtual.eProfessor || false);
+                    setClasseLeciona(alunoAtual.classeLeciona || 'Selecione uma classe');
                   }
                 }}
                 className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2"
