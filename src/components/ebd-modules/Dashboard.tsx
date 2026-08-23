@@ -1,10 +1,69 @@
 import { useEffect, useState } from 'react';
-import { Users, CheckSquare, UserPlus, Building2, GraduationCap, BarChart3, TrendingUp, PieChart, Activity } from 'lucide-react';
-import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart as RechartsPie, Pie, Cell } from 'recharts';
+import { Users, CheckSquare, UserPlus, Building2, GraduationCap, BarChart3, TrendingUp, Activity } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, CartesianGrid } from 'recharts';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 
-const COLORS = ['#6366f1', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
+// Paleta oficial exata com 9 cores rigorosamente contrastantes por turma
+const HEX_CORES_CLASSES = [
+  '#4f46e5', // 01 - Indigo (indigo-600)
+  '#059669', // 02 - Emerald (emerald-600)
+  '#f59e0b', // 03 - Amber (amber-500)
+  '#e11d48', // 04 - Rose (rose-600)
+  '#2563eb', // 05 - Blue (blue-600)
+  '#ea580c', // 06 - Orange (orange-600)
+  '#0891b2', // 07 - Cyan (cyan-600)
+  '#7c3aed', // 08 - Purple (purple-600)
+  '#0f172a', // 09 - Slate/Preto (slate-900)
+];
+
+// Função para associar cor fixa e exclusiva baseada no número/índice da turma
+const getTurmaColor = (nome: string, index: number) => {
+  const numMatch = String(nome).match(/\d+/);
+  if (numMatch) {
+    const num = parseInt(numMatch[0], 10);
+    if (num >= 1 && num >= 1 && num <= 9) {
+      return HEX_CORES_CLASSES[num - 1];
+    }
+  }
+  return HEX_CORES_CLASSES[index % HEX_CORES_CLASSES.length];
+};
+
+// Ordenador numérico rigoroso para turmas (ex: "Classe 01", "Turma 2", etc.)
+const ordenarTurmas = (a: any, b: any, key: string) => {
+  const valA = String(a[key] || '');
+  const valB = String(b[key] || '');
+  const numA = parseInt(valA.replace(/\D/g, ''), 10);
+  const numB = parseInt(valB.replace(/\D/g, ''), 10);
+
+  if (!isNaN(numA) && !isNaN(numB)) {
+    return numA - numB;
+  }
+  return valA.localeCompare(valB, 'pt-BR', { sensitivity: 'base' });
+};
+
+// Tooltip Customizado Minimalista
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-900/95 text-white px-3.5 py-2.5 rounded-xl shadow-xl text-xs backdrop-blur-md border border-slate-700/50 space-y-1">
+        {label && <p className="font-semibold text-slate-300 border-b border-slate-700 pb-1 mb-1">{label}</p>}
+        {payload.map((item: any, index: number) => (
+          <div key={`tooltip-${index}`} className="flex items-center justify-between gap-4">
+            <span className="text-slate-400 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color || item.fill }} />
+              {item.name}:
+            </span>
+            <span className="font-bold text-white">
+              {item.value}{item.dataKey === 'presenca' ? '%' : ''}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 function AnimatedCounter({ value, duration = 1000 }: { value: number; duration?: number }) {
   const [count, setCount] = useState(0);
@@ -56,27 +115,26 @@ export function Dashboard() {
     const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => doc.data());
       
-      // Filtro para considerar apenas os alunos ativos
       const alunosAtivos = listaAlunos.filter(a => !a.situacao || a.situacao === 'Ativo' || a.ativo === true);
-      
       setTotalAlunos(alunosAtivos.length);
 
       const profsNosAlunos = listaAlunos.filter(a => a.eProfessor).length;
       setTotalProfessores(profsNosAlunos);
 
       const contagemClasses: Record<string, number> = {};
-      // Usamos alunosAtivos para que o gráfico de pizza não conte os inativos
       alunosAtivos.forEach((aluno: any) => {
-        const nomeClasse = aluno.classe || 'Não definida';
+        const nomeClasse = aluno.classe || aluno.turma || 'Não definida';
         contagemClasses[nomeClasse] = (contagemClasses[nomeClasse] || 0) + 1;
       });
 
-      const pieData = Object.keys(contagemClasses).map((nome, index) => ({
+      let barData = Object.keys(contagemClasses).map((nome, index) => ({
         name: nome,
         value: contagemClasses[nome],
-        color: COLORS[index % COLORS.length]
+        color: getTurmaColor(nome, index)
       }));
-      setDistribuicaoData(pieData);
+
+      barData.sort((a, b) => ordenarTurmas(a, b, 'name'));
+      setDistribuicaoData(barData);
     });
 
     const unsubClasses = onSnapshot(collection(db, 'classes'), (snapshot) => {
@@ -108,7 +166,6 @@ export function Dashboard() {
         setTotalPresentes(sumPresentesUltima);
         setTotalVisitantes(sumVisitantesUltima);
 
-        // CORREÇÃO ROBUSTA: Calcula a porcentagem geral consolidando a última aula inteira
         const geralUltima = sumMatriculadosUltima > 0 ? Math.round((sumPresentesUltima / sumMatriculadosUltima) * 100) : 0;
         setPercentualPresenca(geralUltima);
       } else {
@@ -117,31 +174,33 @@ export function Dashboard() {
         setPercentualPresenca(0);
       }
 
-      const chartData = listaChamadas.map((cls: any) => {
+      let chartData = listaChamadas.map((cls: any) => {
         const presentes = cls.totalPresentesAlunos || 0;
         const matriculados = cls.totalMatriculados || 0;
         const visitantes = cls.totalVisitantes || 0;
         const taxa = matriculados > 0 ? Math.round((presentes / matriculados) * 100) : 0;
 
         return {
-          aula: cls.classe || 'Classe',
+          aula: cls.classe || cls.turma || 'Classe',
           presenca: taxa,
           total: presentes + visitantes
         };
       });
+      chartData.sort((a, b) => ordenarTurmas(a, b, 'aula'));
       setPresencaAulaData(chartData);
 
       const freqClasseMap = listaChamadas.reduce((acc: any, curr: any) => {
-        const nomeClasse = curr.classe || 'Classe Geral';
+        const nomeClasse = curr.classe || curr.turma || 'Classe Geral';
         const totalAlunosPresentes = (curr.totalPresentesAlunos || 0) + (curr.totalVisitantes || 0);
         acc[nomeClasse] = (acc[nomeClasse] || 0) + totalAlunosPresentes;
         return acc;
       }, {});
 
-      const freqClasseArray = Object.keys(freqClasseMap).map(classe => ({
+      let freqClasseArray = Object.keys(freqClasseMap).map(classe => ({
         classe: classe,
         frequencia: freqClasseMap[classe]
       }));
+      freqClasseArray.sort((a, b) => ordenarTurmas(a, b, 'classe'));
       setFrequenciaClasseData(freqClasseArray);
 
       const evolucaoMap = listaChamadas.reduce((acc: any, curr: any) => {
@@ -150,10 +209,12 @@ export function Dashboard() {
         return acc;
       }, {});
 
-      const evolucaoArray = Object.keys(evolucaoMap).map(data => ({
+      let evolucaoArray = Object.keys(evolucaoMap).map(data => ({
         semana: data.split('-').reverse().slice(0, 2).join('/'),
-        frequencia: evolucaoMap[data]
+        frequencia: evolucaoMap[data],
+        rawDate: data
       }));
+      evolucaoArray.sort((a, b) => a.rawDate.localeCompare(b.rawDate));
       setEvolucaoSemanasData(evolucaoArray);
     });
 
@@ -175,6 +236,24 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6 pb-10">
+      
+      <svg className="absolute w-0 h-0">
+        <defs>
+          <linearGradient id="colorFrequencia" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.4}/>
+            <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0}/>
+          </linearGradient>
+          <linearGradient id="colorPresenca" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.9}/>
+            <stop offset="95%" stopColor="#7c3aed" stopOpacity={0.6}/>
+          </linearGradient>
+          <linearGradient id="colorEvolucao" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4}/>
+            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0}/>
+          </linearGradient>
+        </defs>
+      </svg>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
@@ -182,7 +261,7 @@ export function Dashboard() {
             <div 
               key={index} 
               className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex items-center justify-between 
-                       transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-slate-300/50"
+                         transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-slate-300/50"
             >
               <div className="space-y-1">
                 <span className="text-xs font-semibold text-slate-400 tracking-wider" translate="no">
@@ -202,6 +281,8 @@ export function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Gráfico 1: Frequência por Classe */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
@@ -213,10 +294,20 @@ export function Dashboard() {
             {frequenciaClasseData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={frequenciaClasseData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="classe" stroke="#94a3b8" fontSize={11} />
-                  <YAxis stroke="#94a3b8" fontSize={12} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="frequencia" name="Total Presenças" stroke="#3b82f6" strokeWidth={3} dot={{ r: 5 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="classe" stroke="#94a3b8" fontSize={11} tickLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="frequencia" 
+                    name="Total Presenças" 
+                    stroke="#2563eb" 
+                    strokeWidth={3} 
+                    dot={{ r: 5, fill: '#2563eb', strokeWidth: 2, stroke: '#ffffff' }}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#ffffff' }}
+                    animationDuration={1500}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -225,33 +316,33 @@ export function Dashboard() {
           </div>
         </div>
 
+        {/* Gráfico 2: Alunos por Classe (Em Barras Ordenadas e Coloridas Oficialmente) */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-              <PieChart className="w-4 h-4 text-blue-950" />
+              <BarChart3 className="w-4 h-4 text-blue-950" />
               Alunos por Classe
             </h3>
           </div>
           <div className="h-64 w-full flex items-center justify-center">
             {distribuicaoData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <RechartsPie>
-                  <Pie
-                    data={distribuicaoData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                    label
+                <BarChart data={distribuicaoData} margin={{ top: 15, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} interval={0} />
+                  <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar 
+                    dataKey="value" 
+                    name="Alunos" 
+                    radius={[6, 6, 0, 0]} 
+                    animationDuration={1500}
                   >
                     {distribuicaoData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell key={`bar-cell-${index}`} fill={entry.color} />
                     ))}
-                  </Pie>
-                  <Tooltip />
-                </RechartsPie>
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             ) : (
               <p className="text-xs text-slate-400">Nenhum aluno cadastrado em classes ainda.</p>
@@ -259,6 +350,7 @@ export function Dashboard() {
           </div>
         </div>
 
+        {/* Gráfico 3: % Presença por Aula */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
@@ -270,10 +362,17 @@ export function Dashboard() {
             {presencaAulaData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={presencaAulaData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="aula" stroke="#94a3b8" fontSize={11} />
-                  <YAxis stroke="#94a3b8" fontSize={12} domain={[0, 100]} />
-                  <Tooltip />
-                  <Bar dataKey="presenca" name="Presença (%)" fill="#6366f1" radius={[6, 6, 0, 0]} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="aula" stroke="#94a3b8" fontSize={11} tickLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={12} domain={[0, 100]} tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar 
+                    dataKey="presenca" 
+                    name="Presença (%)" 
+                    fill="url(#colorPresenca)" 
+                    radius={[8, 8, 0, 0]} 
+                    animationDuration={1500}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -282,6 +381,7 @@ export function Dashboard() {
           </div>
         </div>
 
+        {/* Gráfico 4: Evolução de Frequência */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
@@ -293,10 +393,20 @@ export function Dashboard() {
             {evolucaoSemanasData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={evolucaoSemanasData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="semana" stroke="#94a3b8" fontSize={12} />
-                  <YAxis stroke="#94a3b8" fontSize={12} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="frequencia" name="Total Presentes" stroke="#f59e0b" strokeWidth={3} dot={{ r: 5 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="semana" stroke="#94a3b8" fontSize={12} tickLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="frequencia" 
+                    name="Total Presentes" 
+                    stroke="#f59e0b" 
+                    strokeWidth={3} 
+                    dot={{ r: 5, fill: '#f59e0b', strokeWidth: 2, stroke: '#ffffff' }}
+                    activeDot={{ r: 7, strokeWidth: 2, stroke: '#ffffff' }}
+                    animationDuration={1500}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -304,6 +414,7 @@ export function Dashboard() {
             )}
           </div>
         </div>
+
       </div>
     </div>
   );
