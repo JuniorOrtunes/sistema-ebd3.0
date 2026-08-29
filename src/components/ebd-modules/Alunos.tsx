@@ -41,7 +41,7 @@ export function Alunos() {
 
   return (
     <div className="min-h-full flex flex-col p-4 md:p-6 pb-20">
-      <div className="sticky top-0 z-30 bg-gray-50 dark:bg-slate-900 pb-2 shadow-sm">
+      <div className="sticky top-0 z-30 bg-white dark:bg-slate-900 pb-2 shadow-md">
         <AlunoModal 
           editandoId={editandoId}
           modoConferencia={modoConferencia}
