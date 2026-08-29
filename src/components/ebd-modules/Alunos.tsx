@@ -40,7 +40,7 @@ export function Alunos() {
   } = useAlunos();
 
   return (
-    <div className="h-full flex flex-col p-6 overflow-hidden">
+    <div className="min-h-full flex flex-col p-4 md:p-6 pb-20 overflow-y-auto">
       <AlunoModal 
         editandoId={editandoId}
         modoConferencia={modoConferencia}
@@ -69,7 +69,7 @@ export function Alunos() {
         alunosFiltrados={alunosFiltrados}
       />
 
-      <div className="flex-none pb-2">
+      <div className="pb-4">
         <AlunosFilter 
           filtroClasse={filtroClasse}
           setFiltroClasse={setFiltroClasse}
