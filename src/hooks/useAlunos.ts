@@ -288,6 +288,7 @@ export function useAlunos() {
     setCidade(aluno.cidade || '');
     setEProfessor(aluno.eProfessor || false);
     setClasseLeciona(aluno.classeLeciona || 'Selecione uma classe');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleAlternarStatus = async (id: string, situacaoAtual: string) => {

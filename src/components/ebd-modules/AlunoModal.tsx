@@ -71,7 +71,7 @@ export function AlunoModal({
   alunosFiltrados
 }: AlunoModalProps) {
   return (
-    <div className="flex-none bg-gray-50 pb-4 space-y-4">
+   <div className="flex-none sticky top-0 z-20 bg-gray-50 dark:bg-slate-900 pb-4 space-y-4 shadow-sm">
       <div className="flex items-center justify-between pt-1">
         <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
           {editandoId ? 'Editar Aluno / Cadastro' : modoConferencia ? 'Conferência de Dados (Modo Leitura)' : 'Alunos e Corpo Docente'}
