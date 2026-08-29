@@ -10,6 +10,7 @@ interface ChamadaProps {
 interface AlunoItem {
   id: string;
   nome: string;
+  eProfessor?: boolean;
 }
 
 export default function Chamada({ nomeClasse }: ChamadaProps) {
@@ -38,13 +39,25 @@ export default function Chamada({ nomeClasse }: ChamadaProps) {
           // Se a situação for 'Inativo', nós pulamos e não adicionamos na lista de chamada
           if (dados.situacao === 'Inativo') return;
 
+          const eProfessor = Boolean(
+            dados.eProfessor && 
+            (dados.classe === nomeClasse || dados.turma === nomeClasse || dados.classeLeciona === nomeClasse)
+          );
+
           lista.push({
             id: docSnap.id,
-            nome: dados.nome || 'Aluno Sem Nome'
+            nome: dados.nome || 'Aluno Sem Nome',
+            eProfessor
           });
         });
 
-        lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+        // Ordenação: Professores no topo, seguidos por ordem alfabética dos demais alunos
+        lista.sort((a, b) => {
+          if (a.eProfessor && !b.eProfessor) return -1;
+          if (!a.eProfessor && b.eProfessor) return 1;
+          return a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' });
+        });
+
         setAlunosDaClasse(lista);
 
         // Inicializar todas as presenças como false
@@ -143,7 +156,14 @@ export default function Chamada({ nomeClasse }: ChamadaProps) {
               <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
                 {alunosDaClasse.map(aluno => (
                   <div key={aluno.id} className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-xl transition-colors">
-                    <span className="text-sm font-medium text-slate-700">{aluno.nome}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-slate-700">{aluno.nome}</span>
+                      {aluno.eProfessor && (
+                        <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          Professor
+                        </span>
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={() => togglePresencaAluno(aluno.id)}
