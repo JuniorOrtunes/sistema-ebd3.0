@@ -327,7 +327,7 @@ export function Dashboard() {
           <div className="h-64 w-full flex items-center justify-center pt-2">
             {distribuicaoData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={distribuicaoData} margin={{ top: 15, right: 10, left: -20, bottom: 25 }}>
+                <BarChart data={distribuicaoData} margin={{ top: 15, right: 10, left: 10, bottom: 25 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                   <XAxis 
                     dataKey="name" 
