@@ -39,9 +39,9 @@ export function Alunos() {
     limparFormulario
   } = useAlunos();
 
-  return (
+ return (
     <div className="min-h-full flex flex-col p-4 md:p-6 pb-20">
-      <div className="sticky top-0 z-30 bg-white dark:bg-slate-900 pb-2 shadow-md">
+      <div className="sticky top-0 z-30 bg-white dark:bg-slate-900 shadow-lg border-b border-gray-200 dark:border-slate-800 -mx-4 md:-mx-6 px-4 md:px-6 pt-2 pb-4 mb-4">
         <AlunoModal 
           editandoId={editandoId}
           modoConferencia={modoConferencia}
@@ -83,7 +83,7 @@ export function Alunos() {
         </div>
       </div>
 
-      <div className="mt-4">
+      <div>
         <AlunosTable 
           loading={loading}
           alunosFiltrados={alunosFiltrados}
