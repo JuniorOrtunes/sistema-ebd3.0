@@ -316,7 +316,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Gráfico 2: Alunos por Classe (Em Barras Ordenadas e Coloridas Oficialmente) */}
+       {/* Gráfico 2: Alunos por Classe (Em Barras Ordenadas e Coloridas Oficialmente) */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
@@ -324,12 +324,21 @@ export function Dashboard() {
               Alunos por Classe
             </h3>
           </div>
-          <div className="h-64 w-full flex items-center justify-center">
+          <div className="h-64 w-full flex items-center justify-center pt-2">
             {distribuicaoData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={distribuicaoData} margin={{ top: 15, right: 10, left: -20, bottom: 0 }}>
+                <BarChart data={distribuicaoData} margin={{ top: 15, right: 10, left: -20, bottom: 25 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} interval={0} />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="#94a3b8" 
+                    fontSize={9} 
+                    tickLine={false} 
+                    interval={0} 
+                    angle={-45}
+                    textAnchor="end"
+                    height={75}
+                  />
                   <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar 
