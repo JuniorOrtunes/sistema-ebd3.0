@@ -40,9 +40,8 @@ export function Alunos() {
   } = useAlunos();
 
   return (
-    <div className="min-h-full flex flex-col p-4 md:p-6 pb-20 relative">
-      {/* Bloco superior fixo com largura estendida e opacidade sólida garantida */}
-      <div className="sticky top-0 z-50 bg-white dark:bg-slate-900 shadow-xl border-b border-gray-200 dark:border-slate-800 -mx-4 md:-mx-6 px-4 md:px-6 pt-4 pb-4 mb-6">
+    <div className="min-h-full flex flex-col p-4 md:p-6 pb-20">
+      <div className="bg-white dark:bg-slate-900 pb-4 mb-4">
         <AlunoModal 
           editandoId={editandoId}
           modoConferencia={modoConferencia}
@@ -71,7 +70,7 @@ export function Alunos() {
           alunosFiltrados={alunosFiltrados}
         />
 
-        <div className="pt-3">
+        <div className="pt-2">
           <AlunosFilter 
             filtroClasse={filtroClasse}
             setFiltroClasse={setFiltroClasse}
@@ -84,8 +83,7 @@ export function Alunos() {
         </div>
       </div>
 
-      {/* Tabela de Alunos */}
-      <div className="relative z-0">
+      <div>
         <AlunosTable 
           loading={loading}
           alunosFiltrados={alunosFiltrados}
