@@ -39,9 +39,9 @@ export function Alunos() {
     limparFormulario
   } = useAlunos();
 
- return (
+  return (
     <div className="min-h-full flex flex-col p-4 md:p-6 pb-20 relative">
-      {/* Painel Superior Fixo com Fundo Branco Opaco Absoluto */}
+      {/* Bloco superior fixo com largura estendida e opacidade sólida garantida */}
       <div className="sticky top-0 z-50 bg-white dark:bg-slate-900 shadow-xl border-b border-gray-200 dark:border-slate-800 -mx-4 md:-mx-6 px-4 md:px-6 pt-4 pb-4 mb-6">
         <AlunoModal 
           editandoId={editandoId}
