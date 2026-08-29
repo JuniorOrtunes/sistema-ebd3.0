@@ -71,9 +71,9 @@ export function AlunoModal({
   alunosFiltrados
 }: AlunoModalProps) {
   return (
-    <div className="flex-none bg-gray-50 pb-4 space-y-4">
+    <div className="flex-none bg-white dark:bg-slate-900 pb-4 space-y-4">
       <div className="flex items-center justify-between pt-1">
-        <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           {editandoId ? 'Editar Aluno / Cadastro' : modoConferencia ? 'Conferência de Dados (Modo Leitura)' : 'Alunos e Corpo Docente'}
           {modoConferencia && (
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
@@ -85,35 +85,35 @@ export function AlunoModal({
 
       <form 
         onSubmit={handleSalvar} 
-        className={`bg-white p-6 rounded-2xl border shadow-sm space-y-5 transition-all ${
+        className={`bg-white dark:bg-slate-900 p-6 rounded-2xl border shadow-sm space-y-5 transition-all ${
           editandoId 
             ? 'border-indigo-300 ring-2 ring-indigo-100' 
             : modoConferencia 
             ? 'border-blue-300 ring-2 ring-blue-100 bg-blue-50/10' 
-            : 'border-gray-100'
+            : 'border-gray-100 dark:border-slate-800'
         }`}
       >
         <fieldset disabled={modoConferencia} className="space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="lg:col-span-2 space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider">NOME *</label>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 tracking-wider">NOME *</label>
               <input 
                 type="text" 
                 required
                 value={nome}
                 onChange={e => setNome(e.target.value)}
-                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white'}`}
+                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white dark:bg-slate-800 dark:text-white'}`}
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider">CLASSE</label>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 tracking-wider">CLASSE</label>
               <div className="relative">
                 <select 
                   value={classe}
                   onChange={e => setClasse(e.target.value)}
                   disabled={modoConferencia}
-                  className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm appearance-none ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white cursor-pointer'}`}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm appearance-none ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white dark:bg-slate-800 dark:text-white cursor-pointer'}`}
                 >
                   <option value="Sem Classe">Sem Classe</option>
                   {classesDisponiveis.map(c => (
@@ -125,44 +125,44 @@ export function AlunoModal({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider flex items-center gap-1">
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 tracking-wider flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5 text-indigo-500" /> NASCIMENTO
               </label>
               <input 
                 type="date" 
                 value={nascimento}
                 onChange={e => setNascimento(e.target.value)}
-                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white cursor-pointer'}`}
+                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white dark:bg-slate-800 dark:text-white cursor-pointer'}`}
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider flex items-center gap-1">
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 tracking-wider flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5 text-indigo-500" /> CASAMENTO
               </label>
               <input 
                 type="date" 
                 value={casamento}
                 onChange={e => setCasamento(e.target.value)}
-                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white cursor-pointer'}`}
+                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white dark:bg-slate-800 dark:text-white cursor-pointer'}`}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pt-2">
             <div className="space-y-1 lg:col-span-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider">TELEFONE</label>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 tracking-wider">TELEFONE</label>
               <input 
                 type="text" 
                 placeholder="(00) 00000-0000"
                 value={telefone}
                 onChange={e => setTelefone(mascaraTelefone(e.target.value))}
-                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white'}`}
+                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white dark:bg-slate-800 dark:text-white'}`}
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider flex items-center gap-1">
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 tracking-wider flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 text-indigo-500" /> CEP {buscandoCep && <Loader2 className="w-3 h-3 animate-spin text-indigo-600" />}
               </label>
               <input 
@@ -171,62 +171,62 @@ export function AlunoModal({
                 value={cep}
                 onChange={e => setCep(mascaraCep(e.target.value))}
                 onBlur={handleCepBlur}
-                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white'}`}
+                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white dark:bg-slate-800 dark:text-white'}`}
               />
             </div>
 
             <div className="space-y-1 lg:col-span-2">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider">RUA</label>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 tracking-wider">RUA</label>
               <input 
                 type="text" 
                 value={rua}
                 onChange={e => setRua(e.target.value)}
-                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white'}`}
+                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white dark:bg-slate-800 dark:text-white'}`}
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider">NÚMERO</label>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 tracking-wider">NÚMERO</label>
               <input 
                 type="text" 
                 value={numero}
                 onChange={e => setNumero(e.target.value)}
-                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white'}`}
+                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white dark:bg-slate-800 dark:text-white'}`}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider">COMPLEMENTO</label>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 tracking-wider">COMPLEMENTO</label>
               <input 
                 type="text" 
                 value={complemento}
                 onChange={e => setComplemento(e.target.value)}
-                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white'}`}
+                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white dark:bg-slate-800 dark:text-white'}`}
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider">BAIRRO</label>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 tracking-wider">BAIRRO</label>
               <input 
                 type="text" 
                 value={bairro}
                 onChange={e => setBairro(e.target.value)}
-                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white'}`}
+                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white dark:bg-slate-800 dark:text-white'}`}
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 tracking-wider">CIDADE</label>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 tracking-wider">CIDADE</label>
               <input 
                 type="text" 
                 value={cidade}
                 onChange={e => setCidade(e.target.value)}
-                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white'}`}
+                className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white dark:bg-slate-800 dark:text-white'}`}
               />
             </div>
           </div>
 
-          <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/70 space-y-3">
+          <div className="p-4 rounded-xl border border-gray-100 dark:border-slate-800 bg-gray-50/70 dark:bg-slate-800/50 space-y-3">
             <div className="flex items-center gap-3">
               <input 
                 type="checkbox" 
@@ -236,20 +236,20 @@ export function AlunoModal({
                 disabled={modoConferencia}
                 className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
               />
-              <label htmlFor="profCheck" className="text-sm font-semibold text-gray-800 cursor-pointer">
+              <label htmlFor="profCheck" className="text-sm font-semibold text-gray-800 dark:text-gray-200 cursor-pointer">
                 É professor(a)?
               </label>
             </div>
 
             {eProfessor && (
               <div className="space-y-1 pt-2">
-                <label className="text-xs font-semibold text-gray-600 tracking-wider">CLASSE QUE LECIONA</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 tracking-wider">CLASSE QUE LECIONA</label>
                 <div className="relative">
                   <select 
                     value={classeLeciona}
                     onChange={e => setClasseLeciona(e.target.value)}
                     disabled={modoConferencia}
-                    className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm appearance-none ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white cursor-pointer'}`}
+                    className={`w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none text-sm appearance-none ${modoConferencia ? 'bg-gray-100 text-gray-700 cursor-not-allowed' : 'bg-white dark:bg-slate-800 dark:text-white cursor-pointer'}`}
                   >
                     <option value="Selecione uma classe">Selecione uma classe</option>
                     {classesDisponiveis.map(c => (
@@ -267,7 +267,7 @@ export function AlunoModal({
           {!modoConferencia ? (
             <button 
               type="submit"
-              className="px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm flex items-center gap-2"
+              className="px-6 py-2.5 bg-slate-900 dark:bg-slate-800 text-white rounded-xl text-sm font-medium hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors shadow-sm flex items-center gap-2"
             >
               {editandoId ? 'Salvar Alterações' : 'Salvar'}
             </button>

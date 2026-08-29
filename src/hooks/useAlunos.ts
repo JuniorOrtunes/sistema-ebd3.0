@@ -268,7 +268,7 @@ export function useAlunos() {
     setCidade(aluno.cidade || '');
     setEProfessor(aluno.eProfessor || false);
     setClasseLeciona(aluno.classeLeciona || 'Selecione uma classe');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('form-topo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleSelecionarParaConferencia = (aluno: Aluno) => {
@@ -288,6 +288,7 @@ export function useAlunos() {
     setCidade(aluno.cidade || '');
     setEProfessor(aluno.eProfessor || false);
     setClasseLeciona(aluno.classeLeciona || 'Selecione uma classe');
+    document.getElementById('form-topo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleAlternarStatus = async (id: string, situacaoAtual: string) => {
