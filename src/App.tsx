@@ -4,7 +4,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { Dashboard } from './components/ebd-modules/Dashboard';
 import { ClassesModule } from './components/ebd-modules/Classes';
 import { Alunos } from './components/ebd-modules/Alunos';
-import { Encerramento } from './components/ebd-modules/Encerramento';
+import { Encerramento } from './components/ebd-modules/Encerramento/Encerramento';
 import { Comparativos } from './components/ebd-modules/Comparativos';
 import { UserPlus, Key, Eye, EyeOff, X, Trash2 } from 'lucide-react';
 import Login from './components/Login';
