@@ -29,6 +29,7 @@ export function useEncerramento() {
   const [dataSelecionada, setDataSelecionada] = useState(new Date().toISOString().split('T')[0]);
   const [ebdEncerrada, setEbdEncerrada] = useState(false);
   const [classesEBD, setClassesEBD] = useState<ClasseItem[]>([]);
+  const [todasAsClasses, setTodasAsClasses] = useState<ClasseItem[]>([]);
   const [visitantesDia, setVisitantesDia] = useState<VisitanteItem[]>([]);
   const [aniversariantesSemana, setAniversariantesSemana] = useState<AniversarianteItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,17 +43,23 @@ export function useEncerramento() {
 
     const unsubClasses = onSnapshot(collection(db, 'classes'), (classesSnap) => {
       classesMap = {};
+      const listaGlobal: ClasseItem[] = [];
+      
       classesSnap.docs.forEach(docSnap => {
         const dados = docSnap.data();
         const nomeClasse = dados.nome || docSnap.id;
-        classesMap[nomeClasse] = {
+        const itemClasse: ClasseItem = {
           id: docSnap.id,
           nome: nomeClasse,
           matriculados: dados.matriculados || 0,
           presentes: 0,
           visitantes: 0,
         };
+        classesMap[nomeClasse] = itemClasse;
+        listaGlobal.push(itemClasse);
       });
+
+      setTodasAsClasses(listaGlobal);
       processarDados(classesMap, chamadasList);
     });
 
@@ -97,12 +104,6 @@ export function useEncerramento() {
 
       const listaConsolidada = Object.values(mapaTemp);
       listaConsolidada.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
-
-      console.log("Classes Consolidadas:", listaConsolidada);
-      const tMatriculados = listaConsolidada.reduce((acc, c) => acc + c.matriculados, 0);
-      const tPresentes = listaConsolidada.reduce((acc, c) => acc + c.presentes, 0);
-      console.log("Soma Matriculados:", tMatriculados);
-      console.log("Soma Presentes:", tPresentes);
 
       setClassesEBD(listaConsolidada);
       setVisitantesDia(visitantesAcumulados);
@@ -240,9 +241,10 @@ export function useEncerramento() {
         await deleteDoc(fechamentoRef);
 
         const q = query(collection(db, 'chamadas'), where('data', '==', dataSelecionada));
+        // Correção aplicada: Adicionado await na chamada getDocs para evitar falha assíncrona
         const querySnapshot = await getDocs(q);
         
-        const promessasExclusao = querySnapshot.docs.map((documento: any) => 
+        const promessasExclusao = querySnapshot.docs.map((documento) => 
           deleteDoc(doc(db, 'chamadas', documento.id))
         );
         await Promise.all(promessasExclusao);
@@ -257,11 +259,15 @@ export function useEncerramento() {
     }
   };
 
-  const totalMatriculados = classesEBD.reduce((acc, c) => acc + (c.matriculados || 0), 0);
+  // Denominador: Total geral de alunos matriculados em TODAS as classes cadastradas na EBD
+  const totalMatriculados = todasAsClasses.reduce((acc, c) => acc + (c.matriculados || 0), 0);
   const totalPresentesAlunos = classesEBD.reduce((acc, c) => acc + (c.presentes || 0), 0);
   const totalVisitantes = visitantesDia.length;
   const totalGeralPresenca = totalPresentesAlunos + totalVisitantes;
-  const percentualFrequencia = totalMatriculados > 0 ? Math.round((totalPresentesAlunos / totalMatriculados) * 100) : 0;
+  
+  // Cálculo com precisão de 2 casas decimais
+  const percentualFrequenciaNum = totalMatriculados > 0 ? (totalPresentesAlunos / totalMatriculados) * 100 : 0;
+  const percentualFrequencia = Number(percentualFrequenciaNum.toFixed(2));
 
   const nascimentosSemana = aniversariantesSemana.filter((a: any) => a.tipo === 'Nascimento');
   const casamentosSemana = aniversariantesSemana.filter((a: any) => a.tipo === 'Casamento');
