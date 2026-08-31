@@ -67,7 +67,7 @@ export function useEncerramento() {
     });
 
     function processarDados(mapa: Record<string, ClasseItem>, chamadas: any[]) {
-      const mapaTemp: Record<string, ClasseItem> = JSON.parse(JSON.stringify(mapa));
+      const mapaTemp: Record<string, ClasseItem> = {};
       const visitantesAcumulados: VisitanteItem[] = [];
 
       chamadas.forEach((dados: any) => {
@@ -75,21 +75,14 @@ export function useEncerramento() {
         const dataChamada = dados.data; 
 
         if (dataChamada === dataSelecionada && nomeClasse) {
-          if (!mapaTemp[nomeClasse]) {
-            mapaTemp[nomeClasse] = {
-              id: nomeClasse,
-              nome: nomeClasse,
-              matriculados: dados.totalMatriculados || 0,
-              presentes: 0,
-              visitantes: 0
-            };
-          }
-
-          mapaTemp[nomeClasse].presentes = dados.totalPresentesAlunos || 0;
-          mapaTemp[nomeClasse].visitantes = (dados.visitantes || []).length;
-          if (dados.totalMatriculados !== undefined) {
-            mapaTemp[nomeClasse].matriculados = dados.totalMatriculados;
-          }
+          const dadosCadastrados = mapa[nomeClasse];
+          mapaTemp[nomeClasse] = {
+            id: dadosCadastrados?.id || nomeClasse,
+            nome: nomeClasse,
+            matriculados: dados.totalMatriculados !== undefined ? dados.totalMatriculados : (dadosCadastrados?.matriculados || 0),
+            presentes: dados.totalPresentesAlunos || 0,
+            visitantes: (dados.visitantes || []).length
+          };
 
           if (Array.isArray(dados.visitantes)) {
             dados.visitantes.forEach((visNome: string) => {
