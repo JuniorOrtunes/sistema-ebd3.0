@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Printer, Lock, CheckCircle2, Trash2, Users, Cake, Heart } from 'lucide-react';
-import { collection, doc, setDoc, deleteDoc, query, where, onSnapshot, getDocs } from 'firebase/firestore';
-import { db } from '../../firebase';
-import { obterNomeBodas } from '../../utils/bodas';
+import { collection, doc, setDoc, deleteDoc, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
+import { obterNomeBodas } from '../utils/bodas';
 
-interface ClasseItem {
+export interface ClasseItem {
   id: string;
   nome: string;
   matriculados: number;
@@ -12,12 +11,12 @@ interface ClasseItem {
   visitantes: number;
 }
 
-interface VisitanteItem {
+export interface VisitanteItem {
   nome: string;
   classe: string;
 }
 
-interface AniversarianteItem {
+export interface AniversarianteItem {
   id: string;
   nome: string;
   classe: string;
@@ -26,7 +25,7 @@ interface AniversarianteItem {
   detalheAnos?: string;
 }
 
-export function Encerramento() {
+export function useEncerramento() {
   const [dataSelecionada, setDataSelecionada] = useState(new Date().toISOString().split('T')[0]);
   const [ebdEncerrada, setEbdEncerrada] = useState(false);
   const [classesEBD, setClassesEBD] = useState<ClasseItem[]>([]);
@@ -258,7 +257,7 @@ export function Encerramento() {
       }
     }
   };
-  
+
   const totalMatriculados = classesEBD.reduce((acc, c) => acc + (c.matriculados || 0), 0);
   const totalPresentesAlunos = classesEBD.reduce((acc, c) => acc + (c.presentes || 0), 0);
   const totalVisitantes = visitantesDia.length;
@@ -268,149 +267,18 @@ export function Encerramento() {
   const nascimentosSemana = aniversariantesSemana.filter((a: any) => a.tipo === 'Nascimento');
   const casamentosSemana = aniversariantesSemana.filter((a: any) => a.tipo === 'Casamento');
 
-  return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12">
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4 print:hidden">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Domingo</label>
-              <input type="date" value={dataSelecionada} onChange={(e) => setDataSelecionada(e.target.value)} className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 outline-none focus:border-slate-700" />
-            </div>
-            <span className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${ebdEncerrada ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
-              {ebdEncerrada ? <Lock className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-              {ebdEncerrada ? 'ENCERRADA' : 'ABERTA'}
-            </span>
-          </div>
-
-          <div className="flex gap-3 flex-wrap">
-            <button onClick={() => window.print()} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold flex items-center gap-2">
-              <Printer className="w-4 h-4" /> Imprimir
-            </button>
-            <button onClick={handleEncerrarEBD} className={`px-5 py-2 rounded-xl text-sm font-bold text-white ${ebdEncerrada ? 'bg-amber-600' : 'bg-rose-600'}`}>
-              {ebdEncerrada ? 'Reabrir EBD' : 'Encerrar EBD'}
-            </button>
-            <button 
-              onClick={handleExcluirAulaData} 
-              className="px-4 py-2 bg-red-50 text-red-600 border border-red-200/60 hover:bg-red-100 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-all"
-            >
-              <Trash2 className="w-4 h-4" /> Excluir Aula
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-6">
-        <div className="flex justify-between items-center border-b border-slate-100 pb-6">
-          <h2 className="text-lg font-bold text-slate-900">Boletim</h2>
-          <div className="text-right bg-slate-50 px-5 py-3 rounded-2xl border border-slate-100">
-            <span className="text-[10px] font-bold text-slate-400 block uppercase">Total Presentes</span>
-            <span className="text-2xl font-black text-slate-900">{totalGeralPresenca}</span>
-          </div>
-        </div>
-
-        {loading ? <p className="text-center py-8 text-slate-400">Carregando em tempo real...</p> : (
-          <div className="space-y-6">
-            <div>
-              <div className="hidden md:block">
-                <table className="w-full text-left">
-                  <thead><tr className="text-slate-400 text-[11px] uppercase border-b border-slate-100"><th className="pb-3">Classe</th><th className="pb-3 text-center">Matr.</th><th className="pb-3 text-center">Pres.</th><th className="pb-3 text-center">Vis.</th></tr></thead>
-                  <tbody className="divide-y divide-slate-50">{classesEBD.map(c => <tr key={c.id}><td className="py-3 font-semibold">{c.nome}</td><td className="text-center">{c.matriculados}</td><td className="text-center">{c.presentes}</td><td className="text-center">{c.visitantes}</td></tr>)}</tbody>
-                </table>
-              </div>
-              <div className="md:hidden space-y-3">
-                {classesEBD.map(c => (
-                  <div key={c.id} className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex justify-between items-center">
-                    <div>
-                      <p className="font-bold text-slate-800">{c.nome}</p>
-                      <p className="text-[10px] text-slate-500 uppercase font-bold">Matr: {c.matriculados}</p>
-                    </div>
-                    <div className="flex gap-4 text-center">
-                      <div><p className="text-[10px] text-slate-400 uppercase">Pres.</p><p className="font-bold text-slate-800">{c.presentes}</p></div>
-                      <div><p className="text-[10px] text-slate-400 uppercase">Vis.</p><p className="font-bold text-slate-800">{c.visitantes}</p></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* SEÇÃO EM 3 COLUNAS: VISITANTES, ANIVERSÁRIOS E CASAMENTOS */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 border-t border-slate-100 pt-6">
-              
-              {/* VISITANTES DO DIA */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
-                  <Users className="w-4 h-4 text-amber-600" /> Visitantes ({visitantesDia.length})
-                </h3>
-                {visitantesDia.length > 0 ? (
-                  <div className="space-y-2">
-                    {visitantesDia.map((vis, idx) => (
-                      <div key={idx} className="bg-amber-50/50 p-3 rounded-xl border border-amber-100/60 flex justify-between items-center">
-                        <span className="text-xs font-semibold text-slate-800">{vis.nome}</span>
-                        <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">{vis.classe}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-400 italic">Nenhum visitante registrado.</p>
-                )}
-              </div>
-
-              {/* ANIVERSARIANTES DE NASCIMENTO */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
-                  <Cake className="w-4 h-4 text-indigo-600" /> Aniversários ({nascimentosSemana.length})
-                </h3>
-                {nascimentosSemana.length > 0 ? (
-                  <div className="space-y-2">
-                    {nascimentosSemana.map((aniv) => (
-                      <div key={aniv.id} className="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100/60 flex justify-between items-center">
-                        <div>
-                          <p className="text-xs font-semibold text-slate-800">{aniv.nome}</p>
-                          <p className="text-[10px] text-slate-500">{aniv.classe}</p>
-                        </div>
-                        <span className="text-xs font-bold bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-lg">{aniv.dataStr}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-400 italic">Nenhum aniversariante na semana.</p>
-                )}
-              </div>
-
-              {/* ANIVERSÁRIOS DE CASAMENTO COM BODAS */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-rose-600" /> Casamentos ({casamentosSemana.length})
-                </h3>
-                {casamentosSemana.length > 0 ? (
-                  <div className="space-y-2">
-                    {casamentosSemana.map((aniv) => (
-                      <div key={aniv.id} className="bg-rose-50/50 p-3 rounded-xl border border-rose-100/60 flex justify-between items-center">
-                        <div>
-                          <p className="text-xs font-semibold text-slate-800">{aniv.nome}</p>
-                          <p className="text-[10px] text-slate-500">
-                            {aniv.classe} {aniv.detalheAnos && <span className="font-bold text-rose-600">• {aniv.detalheAnos}</span>}
-                          </p>
-                        </div>
-                        <span className="text-xs font-bold bg-rose-100 text-rose-800 px-2.5 py-1 rounded-lg">{aniv.dataStr}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-400 italic">Nenhum aniversário de casamento.</p>
-                )}
-              </div>
-
-            </div>
-
-          </div>
-        )}
-
-        <p className="text-xs text-slate-500 pt-4 border-t border-slate-100">
-          Frequência: {percentualFrequencia}%
-        </p>
-      </div>
-    </div>
-  );
+  return {
+    dataSelecionada,
+    setDataSelecionada,
+    ebdEncerrada,
+    classesEBD,
+    visitantesDia,
+    loading,
+    totalGeralPresenca,
+    percentualFrequencia,
+    nascimentosSemana,
+    casamentosSemana,
+    handleEncerrarEBD,
+    handleExcluirAulaData
+  };
 }
