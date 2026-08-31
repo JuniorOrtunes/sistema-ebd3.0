@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Printer, Lock, CheckCircle2, Trash2, Users, Cake, Heart } from 'lucide-react';
 import { collection, doc, setDoc, deleteDoc, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { obterNomeBodas } from '../../utils/bodas'; // Importando o utilitário limpo
+import { obterNomeBodas } from '../../utils/bodas';
 
 interface ClasseItem {
   id: string;
@@ -199,38 +199,36 @@ export function Encerramento() {
         }
       }
 
-      // Ordenar por ordem crescente de data (da mais antiga para a mais recente na semana)
       aniversariantesEncontrados.sort((a, b) => a.dataReal.getTime() - b.dataReal.getTime());
-
       setAniversariantesSemana(aniversariantesEncontrados.map(x => x.item));
     });
 
     return () => unsubAlunos();
   }, [dataSelecionada]);
 
-  const totalMatriculados = classesEBD.reduce((acc, c) => acc + (c.matriculados || 0), 0);
-  const totalPresentesAlunos = classesEBD.reduce((acc, c) => acc + (c.presentes || 0), 0);
-  const totalVisitantes = visitantesDia.length;
-  const totalGeralPresenca = totalPresentesAlunos + totalVisitantes;
-  const percentualFrequencia = totalMatriculados > 0 ? Math.round((totalPresentesAlunos / totalMatriculados) * 100) : 0;
-
-  const nascimentosSemana = aniversariantesSemana.filter(a => a.tipo === 'Nascimento');
-  const casamentosSemana = aniversariantesSemana.filter(a => a.tipo === 'Casamento');
-
   const handleEncerrarEBD = async () => {
     const novoStatus = !ebdEncerrada;
-    if (window.confirm(novoStatus ? 'Bloquear edições das chamadas?' : 'Reabrir EBD para edições?')) {
+    const mensagemConfirmacao = novoStatus ? 'Deseja realmente encerrar a EBD e bloquear as edições?' : 'Deseja reabrir a EBD para edições?';
+    
+    if (window.confirm(mensagemConfirmacao)) {
       try {
         setEbdEncerrada(novoStatus);
-        await setDoc(doc(db, 'ebd_fechamentos', dataSelecionada), {
+
+        const dadosFechamento = {
           data: dataSelecionada,
           encerrada: novoStatus,
-          classes: classesEBD,
-          visitantes: visitantesDia,
-          aniversariantes: aniversariantesSemana,
+          classes: JSON.parse(JSON.stringify(classesEBD)),
+          visitantes: JSON.parse(JSON.stringify(visitantesDia)),
+          aniversariantes: JSON.parse(JSON.stringify(aniversariantesSemana)),
           atualizadoEm: new Date().toISOString()
-        }, { merge: true });
-      } catch (error) { alert('Erro ao salvar alteração.'); }
+        };
+
+        await setDoc(doc(db, 'ebd_fechamentos', dataSelecionada), dadosFechamento, { merge: true });
+      } catch (error) {
+        console.error('Erro detalhado ao salvar encerramento da EBD:', error);
+        setEbdEncerrada(!novoStatus);
+        alert('Erro ao salvar alteração. Verifique o console para mais detalhes.');
+      }
     }
   };
 
@@ -260,6 +258,15 @@ export function Encerramento() {
       }
     }
   };
+  
+  const totalMatriculados = classesEBD.reduce((acc, c) => acc + (c.matriculados || 0), 0);
+  const totalPresentesAlunos = classesEBD.reduce((acc, c) => acc + (c.presentes || 0), 0);
+  const totalVisitantes = visitantesDia.length;
+  const totalGeralPresenca = totalPresentesAlunos + totalVisitantes;
+  const percentualFrequencia = totalMatriculados > 0 ? Math.round((totalPresentesAlunos / totalMatriculados) * 100) : 0;
+
+  const nascimentosSemana = aniversariantesSemana.filter((a: any) => a.tipo === 'Nascimento');
+  const casamentosSemana = aniversariantesSemana.filter((a: any) => a.tipo === 'Casamento');
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
@@ -400,7 +407,9 @@ export function Encerramento() {
           </div>
         )}
 
-        <p className="text-xs text-slate-500 pt-4 border-t border-slate-100">Frequência: {percentualFrequencia}%</p>
+        <p className="text-xs text-slate-500 pt-4 border-t border-slate-100">
+          Frequência: {percentualFrequencia}%
+        </p>
       </div>
     </div>
   );
