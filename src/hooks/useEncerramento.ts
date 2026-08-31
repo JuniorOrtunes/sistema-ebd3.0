@@ -95,8 +95,14 @@ export function useEncerramento() {
         }
       });
 
-      let listaConsolidada = Object.values(mapaTemp);
+      const listaConsolidada = Object.values(mapaTemp);
       listaConsolidada.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+
+      console.log("Classes Consolidadas:", listaConsolidada);
+      const tMatriculados = listaConsolidada.reduce((acc, c) => acc + c.matriculados, 0);
+      const tPresentes = listaConsolidada.reduce((acc, c) => acc + c.presentes, 0);
+      console.log("Soma Matriculados:", tMatriculados);
+      console.log("Soma Presentes:", tPresentes);
 
       setClassesEBD(listaConsolidada);
       setVisitantesDia(visitantesAcumulados);
