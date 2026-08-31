@@ -22,7 +22,7 @@ const getTurmaColor = (nome: string, index: number) => {
   const numMatch = String(nome).match(/\d+/);
   if (numMatch) {
     const num = parseInt(numMatch[0], 10);
-    if (num >= 1 && num >= 1 && num <= 9) {
+    if (num >= 1 && num <= 9) {
       return HEX_CORES_CLASSES[num - 1];
     }
   }
@@ -112,11 +112,45 @@ export function Dashboard() {
   const [evolucaoSemanasData, setEvolucaoSemanasData] = useState<any[]>([]);
 
   useEffect(() => {
+    let alunosAtivosCount = 0;
+    let listaChamadasGlobal: any[] = [];
+
+    // Função auxiliar para recalcular a presença geral com base nos dados mais recentes
+    const recalcularMetricas = (totalAtivos: number, listaChamadas: any[]) => {
+      if (listaChamadas.length > 0) {
+        const datasUnicas = Array.from(new Set(listaChamadas.map((c: any) => c.data))).filter(Boolean) as string[];
+        datasUnicas.sort().reverse();
+        const ultimaData = datasUnicas[0];
+
+        const chamadasUltimaAula = listaChamadas.filter((cls: any) => cls.data === ultimaData);
+
+        let sumPresentesUltima = 0;
+        let sumVisitantesUltima = 0;
+
+        chamadasUltimaAula.forEach((cls: any) => {
+          sumPresentesUltima += cls.totalPresentesAlunos || 0;
+          sumVisitantesUltima += cls.totalVisitantes || 0;
+        });
+
+        setTotalPresentes(sumPresentesUltima);
+        setTotalVisitantes(sumVisitantesUltima);
+
+        // CORREÇÃO: Fórmula exata (Presentes / MatriculadosAtivos * 100)
+        const geralUltima = totalAtivos > 0 ? Number(((sumPresentesUltima / totalAtivos) * 100).toFixed(1)) : 0;
+        setPercentualPresenca(Math.round(geralUltima)); // ou manter arredondado / com decimal se preferir
+      } else {
+        setTotalPresentes(0);
+        setTotalVisitantes(0);
+        setPercentualPresenca(0);
+      }
+    };
+
     const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => doc.data());
       
       const alunosAtivos = listaAlunos.filter(a => !a.situacao || a.situacao === 'Ativo' || a.ativo === true);
-      setTotalAlunos(alunosAtivos.length);
+      alunosAtivosCount = alunosAtivos.length;
+      setTotalAlunos(alunosAtivosCount);
 
       const profsNosAlunos = listaAlunos.filter(a => a.eProfessor).length;
       setTotalProfessores(profsNosAlunos);
@@ -135,6 +169,11 @@ export function Dashboard() {
 
       barData.sort((a, b) => ordenarTurmas(a, b, 'name'));
       setDistribuicaoData(barData);
+
+      // Recalcula métricas dependentes de alunos caso as chamadas já tenham carregado
+      if (listaChamadasGlobal.length > 0) {
+        recalcularMetricas(alunosAtivosCount, listaChamadasGlobal);
+      }
     });
 
     const unsubClasses = onSnapshot(collection(db, 'classes'), (snapshot) => {
@@ -144,37 +183,11 @@ export function Dashboard() {
     });
 
     const unsubChamadas = onSnapshot(collection(db, 'chamadas'), (snapshot) => {
-      const listaChamadas = snapshot.docs.map(doc => doc.data());
+      listaChamadasGlobal = snapshot.docs.map(doc => doc.data());
 
-      if (listaChamadas.length > 0) {
-        const datasUnicas = Array.from(new Set(listaChamadas.map((c: any) => c.data))).filter(Boolean) as string[];
-        datasUnicas.sort().reverse();
-        const ultimaData = datasUnicas[0];
+      recalcularMetricas(alunosAtivosCount, listaChamadasGlobal);
 
-        const chamadasUltimaAula = listaChamadas.filter((cls: any) => cls.data === ultimaData);
-
-        let sumPresentesUltima = 0;
-        let sumVisitantesUltima = 0;
-        let sumMatriculadosUltima = 0;
-
-        chamadasUltimaAula.forEach((cls: any) => {
-          sumPresentesUltima += cls.totalPresentesAlunos || 0;
-          sumVisitantesUltima += cls.totalVisitantes || 0;
-          sumMatriculadosUltima += cls.totalMatriculados || 0;
-        });
-
-        setTotalPresentes(sumPresentesUltima);
-        setTotalVisitantes(sumVisitantesUltima);
-
-        const geralUltima = sumMatriculadosUltima > 0 ? Math.round((sumPresentesUltima / sumMatriculadosUltima) * 100) : 0;
-        setPercentualPresenca(geralUltima);
-      } else {
-        setTotalPresentes(0);
-        setTotalVisitantes(0);
-        setPercentualPresenca(0);
-      }
-
-      let chartData = listaChamadas.map((cls: any) => {
+      let chartData = listaChamadasGlobal.map((cls: any) => {
         const presentes = cls.totalPresentesAlunos || 0;
         const matriculados = cls.totalMatriculados || 0;
         const visitantes = cls.totalVisitantes || 0;
@@ -189,7 +202,7 @@ export function Dashboard() {
       chartData.sort((a, b) => ordenarTurmas(a, b, 'aula'));
       setPresencaAulaData(chartData);
 
-      const freqClasseMap = listaChamadas.reduce((acc: any, curr: any) => {
+      const freqClasseMap = listaChamadasGlobal.reduce((acc: any, curr: any) => {
         const nomeClasse = curr.classe || curr.turma || 'Classe Geral';
         const totalAlunosPresentes = (curr.totalPresentesAlunos || 0) + (curr.totalVisitantes || 0);
         acc[nomeClasse] = (acc[nomeClasse] || 0) + totalAlunosPresentes;
@@ -203,7 +216,7 @@ export function Dashboard() {
       freqClasseArray.sort((a, b) => ordenarTurmas(a, b, 'classe'));
       setFrequenciaClasseData(freqClasseArray);
 
-      const evolucaoMap = listaChamadas.reduce((acc: any, curr: any) => {
+      const evolucaoMap = listaChamadasGlobal.reduce((acc: any, curr: any) => {
         const data = curr.data || 'Data';
         acc[data] = (acc[data] || 0) + (curr.totalPresentesAlunos || 0) + (curr.totalVisitantes || 0);
         return acc;
