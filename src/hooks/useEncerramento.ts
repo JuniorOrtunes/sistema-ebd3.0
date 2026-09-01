@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { collection, doc, setDoc, deleteDoc, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { obterNomeBodas } from '../utils/bodas';
+import { calcularFrequenciaGeral } from '../services/frequenciaService';
 
 export interface ClasseItem {
   id: string;
@@ -31,43 +32,64 @@ export function useEncerramento() {
   const [classesEBD, setClassesEBD] = useState<ClasseItem[]>([]);
   const [visitantesDia, setVisitantesDia] = useState<VisitanteItem[]>([]);
   const [aniversariantesSemana, setAniversariantesSemana] = useState<AniversarianteItem[]>([]);
+  const [percentualFrequencia, setPercentualFrequencia] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // 1. REALTIME: Sincronização em tempo real de Classes, Chamadas e Fechamentos
+  // 1. REALTIME: Sincronização em tempo real de Classes, Chamadas, Fechamentos e Frequência Centralizada
   useEffect(() => {
+    let isMounted = true;
     setLoading(true);
+
+    const atualizarFrequenciaGlobal = async () => {
+      try {
+        const resultado = await calcularFrequenciaGeral(dataSelecionada);
+        if (isMounted) {
+          setPercentualFrequencia(resultado.percentualFrequencia);
+        }
+      } catch (error) {
+        console.error('Erro ao calcular frequência geral:', error);
+      }
+    };
+
+    atualizarFrequenciaGlobal();
 
     let classesMap: Record<string, ClasseItem> = {};
     let chamadasList: any[] = [];
 
     const unsubClasses = onSnapshot(collection(db, 'classes'), (classesSnap) => {
       classesMap = {};
+      
       classesSnap.docs.forEach(docSnap => {
         const dados = docSnap.data();
         const nomeClasse = dados.nome || docSnap.id;
-        classesMap[nomeClasse] = {
+        const itemClasse: ClasseItem = {
           id: docSnap.id,
           nome: nomeClasse,
           matriculados: dados.matriculados || 0,
           presentes: 0,
           visitantes: 0,
         };
+        classesMap[nomeClasse] = itemClasse;
       });
+
       processarDados(classesMap, chamadasList);
     });
 
     const unsubChamadas = onSnapshot(collection(db, 'chamadas'), (chamadasSnap) => {
       chamadasList = chamadasSnap.docs.map(doc => doc.data());
       processarDados(classesMap, chamadasList);
+      atualizarFrequenciaGlobal();
     });
 
     const fechamentoRef = doc(db, 'ebd_fechamentos', dataSelecionada);
     const unsubFechamento = onSnapshot(fechamentoRef, (fechamentoSnap) => {
-      setEbdEncerrada(fechamentoSnap.exists() ? (fechamentoSnap.data().encerrada || false) : false);
+      if (isMounted) {
+        setEbdEncerrada(fechamentoSnap.exists() ? (fechamentoSnap.data().encerrada || false) : false);
+      }
     });
 
     function processarDados(mapa: Record<string, ClasseItem>, chamadas: any[]) {
-      const mapaTemp: Record<string, ClasseItem> = JSON.parse(JSON.stringify(mapa));
+      const mapaTemp: Record<string, ClasseItem> = {};
       const visitantesAcumulados: VisitanteItem[] = [];
 
       chamadas.forEach((dados: any) => {
@@ -75,21 +97,14 @@ export function useEncerramento() {
         const dataChamada = dados.data; 
 
         if (dataChamada === dataSelecionada && nomeClasse) {
-          if (!mapaTemp[nomeClasse]) {
-            mapaTemp[nomeClasse] = {
-              id: nomeClasse,
-              nome: nomeClasse,
-              matriculados: dados.totalMatriculados || 0,
-              presentes: 0,
-              visitantes: 0
-            };
-          }
-
-          mapaTemp[nomeClasse].presentes = dados.totalPresentesAlunos || 0;
-          mapaTemp[nomeClasse].visitantes = (dados.visitantes || []).length;
-          if (dados.totalMatriculados !== undefined) {
-            mapaTemp[nomeClasse].matriculados = dados.totalMatriculados;
-          }
+          const dadosCadastrados = mapa[nomeClasse];
+          mapaTemp[nomeClasse] = {
+            id: dadosCadastrados?.id || nomeClasse,
+            nome: nomeClasse,
+            matriculados: dados.totalMatriculados !== undefined ? dados.totalMatriculados : (dadosCadastrados?.matriculados || 0),
+            presentes: dados.totalPresentesAlunos || 0,
+            visitantes: (dados.visitantes || []).length
+          };
 
           if (Array.isArray(dados.visitantes)) {
             dados.visitantes.forEach((visNome: string) => {
@@ -102,22 +117,25 @@ export function useEncerramento() {
         }
       });
 
-      let listaConsolidada = Object.values(mapaTemp);
+      const listaConsolidada = Object.values(mapaTemp);
       listaConsolidada.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
 
-      setClassesEBD(listaConsolidada);
-      setVisitantesDia(visitantesAcumulados);
-      setLoading(false);
+      if (isMounted) {
+        setClassesEBD(listaConsolidada);
+        setVisitantesDia(visitantesAcumulados);
+        setLoading(false);
+      }
     }
 
     return () => {
+      isMounted = false;
       unsubClasses();
       unsubChamadas();
       unsubFechamento();
     };
   }, [dataSelecionada]);
 
-  // 2. ANIVERSARIANTES: Cálculo, Bodas e Ordenação Crescente
+  // 2. ALUNOS MATRICULADOS E ANIVERSARIANTES
   useEffect(() => {
     const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
@@ -243,7 +261,7 @@ export function useEncerramento() {
         const q = query(collection(db, 'chamadas'), where('data', '==', dataSelecionada));
         const querySnapshot = await getDocs(q);
         
-        const promessasExclusao = querySnapshot.docs.map((documento: any) => 
+        const promessasExclusao = querySnapshot.docs.map((documento) => 
           deleteDoc(doc(db, 'chamadas', documento.id))
         );
         await Promise.all(promessasExclusao);
@@ -258,12 +276,10 @@ export function useEncerramento() {
     }
   };
 
-  const totalMatriculados = classesEBD.reduce((acc, c) => acc + (c.matriculados || 0), 0);
   const totalPresentesAlunos = classesEBD.reduce((acc, c) => acc + (c.presentes || 0), 0);
   const totalVisitantes = visitantesDia.length;
   const totalGeralPresenca = totalPresentesAlunos + totalVisitantes;
-  const percentualFrequencia = totalMatriculados > 0 ? Math.round((totalPresentesAlunos / totalMatriculados) * 100) : 0;
-
+  
   const nascimentosSemana = aniversariantesSemana.filter((a: any) => a.tipo === 'Nascimento');
   const casamentosSemana = aniversariantesSemana.filter((a: any) => a.tipo === 'Casamento');
 

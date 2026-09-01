@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Superintendente } from './lib/ebd';
 import { Sidebar } from './components/layout/Sidebar';
-import { Dashboard } from './components/ebd-modules/Dashboard';
+import { Dashboard } from './components/ebd-modules/Dashboard/Dashboard';
 import { ClassesModule } from './components/ebd-modules/Classes';
 import { Alunos } from './components/ebd-modules/Alunos';
 import { Encerramento } from './components/ebd-modules/Encerramento/Encerramento';
