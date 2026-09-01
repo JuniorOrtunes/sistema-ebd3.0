@@ -86,13 +86,13 @@ export function useDashboard() {
       }
     };
 
-   const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
+  const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
       
-      // Filtro robusto que normaliza qualquer variação salva pelo botão de status
+      // Filtrando pelo campo correto 'situacao' (mesmo padrão do AlunosTable e Chamada)
       const alunosAtivos = listaAlunos.filter(aluno => {
-        const statusStr = String(aluno.status || '').trim().toLowerCase();
-        return statusStr !== 'inativo';
+        const situacaoStr = String(aluno.situacao || aluno.status || '').trim().toLowerCase();
+        return situacaoStr !== 'inativo';
       });
       setTotalAlunos(alunosAtivos.length);
 
