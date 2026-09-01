@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { collection, doc, setDoc, deleteDoc, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { obterNomeBodas } from '../utils/bodas';
+import { calcularFrequenciaGeral } from '../services/frequenciaService';
 
 export interface ClasseItem {
   id: string;
@@ -31,12 +32,26 @@ export function useEncerramento() {
   const [classesEBD, setClassesEBD] = useState<ClasseItem[]>([]);
   const [visitantesDia, setVisitantesDia] = useState<VisitanteItem[]>([]);
   const [aniversariantesSemana, setAniversariantesSemana] = useState<AniversarianteItem[]>([]);
-  const [totalGeralMatriculados, setTotalGeralMatriculados] = useState(0);
+  const [percentualFrequencia, setPercentualFrequencia] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // 1. REALTIME: Sincronização em tempo real de Classes, Chamadas e Fechamentos
+  // 1. REALTIME: Sincronização em tempo real de Classes, Chamadas, Fechamentos e Frequência Centralizada
   useEffect(() => {
+    let isMounted = true;
     setLoading(true);
+
+    const atualizarFrequenciaGlobal = async () => {
+      try {
+        const resultado = await calcularFrequenciaGeral(dataSelecionada);
+        if (isMounted) {
+          setPercentualFrequencia(resultado.percentualFrequencia);
+        }
+      } catch (error) {
+        console.error('Erro ao calcular frequência geral:', error);
+      }
+    };
+
+    atualizarFrequenciaGlobal();
 
     let classesMap: Record<string, ClasseItem> = {};
     let chamadasList: any[] = [];
@@ -63,11 +78,14 @@ export function useEncerramento() {
     const unsubChamadas = onSnapshot(collection(db, 'chamadas'), (chamadasSnap) => {
       chamadasList = chamadasSnap.docs.map(doc => doc.data());
       processarDados(classesMap, chamadasList);
+      atualizarFrequenciaGlobal();
     });
 
     const fechamentoRef = doc(db, 'ebd_fechamentos', dataSelecionada);
     const unsubFechamento = onSnapshot(fechamentoRef, (fechamentoSnap) => {
-      setEbdEncerrada(fechamentoSnap.exists() ? (fechamentoSnap.data().encerrada || false) : false);
+      if (isMounted) {
+        setEbdEncerrada(fechamentoSnap.exists() ? (fechamentoSnap.data().encerrada || false) : false);
+      }
     });
 
     function processarDados(mapa: Record<string, ClasseItem>, chamadas: any[]) {
@@ -102,12 +120,15 @@ export function useEncerramento() {
       const listaConsolidada = Object.values(mapaTemp);
       listaConsolidada.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
 
-      setClassesEBD(listaConsolidada);
-      setVisitantesDia(visitantesAcumulados);
-      setLoading(false);
+      if (isMounted) {
+        setClassesEBD(listaConsolidada);
+        setVisitantesDia(visitantesAcumulados);
+        setLoading(false);
+      }
     }
 
     return () => {
+      isMounted = false;
       unsubClasses();
       unsubChamadas();
       unsubFechamento();
@@ -118,9 +139,6 @@ export function useEncerramento() {
   useEffect(() => {
     const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
-      
-      const alunosAtivos = listaAlunos.filter(aluno => aluno.status !== 'Inativo');
-      setTotalGeralMatriculados(alunosAtivos.length);
       
       if (!dataSelecionada) return;
 
@@ -262,9 +280,6 @@ export function useEncerramento() {
   const totalVisitantes = visitantesDia.length;
   const totalGeralPresenca = totalPresentesAlunos + totalVisitantes;
   
-  const percentualFrequenciaNum = totalGeralMatriculados > 0 ? (totalPresentesAlunos / totalGeralMatriculados) * 100 : 0;
-  const percentualFrequencia = Number(percentualFrequenciaNum.toFixed(2));
-
   const nascimentosSemana = aniversariantesSemana.filter((a: any) => a.tipo === 'Nascimento');
   const casamentosSemana = aniversariantesSemana.filter((a: any) => a.tipo === 'Casamento');
 
