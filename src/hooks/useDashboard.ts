@@ -76,8 +76,8 @@ export function useDashboard() {
         setTotalPresentes(sumPresentesUltima);
         setTotalVisitantes(sumVisitantesUltima);
 
-        const geralUltima = totalAtivos > 0 ? Number(((sumPresentesUltima / totalAtivos) * 100).toFixed(1)) : 0;
-        setPercentualPresenca(Math.round(geralUltima));
+        const geralUltima = totalAtivos > 0 ? Number(((sumPresentesUltima / totalAtivos) * 100).toFixed(2)) : 0;
+        setPercentualPresenca(geralUltima);
       } else {
         setTotalPresentes(0);
         setTotalVisitantes(0);
