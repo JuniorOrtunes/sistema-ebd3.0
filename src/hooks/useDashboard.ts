@@ -86,11 +86,14 @@ export function useDashboard() {
       }
     };
 
-    const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
+  const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
       
-      // Critério estrito e unificado idêntico ao useEncerramento
-      const alunosAtivos = listaAlunos.filter(aluno => aluno.status !== 'Inativo');
+      // Filtrando pelo campo correto 'situacao' (mesmo padrão do AlunosTable e Chamada)
+      const alunosAtivos = listaAlunos.filter(aluno => {
+        const situacaoStr = String(aluno.situacao || aluno.status || '').trim().toLowerCase();
+        return situacaoStr !== 'inativo';
+      });
       setTotalAlunos(alunosAtivos.length);
 
       const profsNosAlunos = listaAlunos.filter(a => a.eProfessor).length;
@@ -101,6 +104,7 @@ export function useDashboard() {
         const nomeClasse = aluno.classe || aluno.turma || 'Não definida';
         contagemClasses[nomeClasse] = (contagemClasses[nomeClasse] || 0) + 1;
       });
+      // ... resto do código
 
       let barData = Object.keys(contagemClasses).map((nome, index) => ({
         name: nome,

@@ -10,12 +10,16 @@ export interface DadosFrequenciaGeral {
 }
 
 export async function calcularFrequenciaGeral(dataSelecionada: string): Promise<DadosFrequenciaGeral> {
-  // 1. Buscar total global de alunos ativos (Denominador fixo)
+// 1. Buscar total global de alunos ativos (Denominador fixo)
   const alunosRef = collection(db, 'alunos');
   const alunosSnap = await getDocs(alunosRef);
+  
   const alunosAtivos = alunosSnap.docs
     .map(doc => ({ id: doc.id, ...doc.data() } as any))
-    .filter(aluno => aluno.status !== 'Inativo');
+    .filter(aluno => {
+      const situacaoStr = String(aluno.situacao || aluno.status || '').trim().toLowerCase();
+      return situacaoStr !== 'inativo';
+    });
   
   const totalGeralMatriculados = alunosAtivos.length;
 
@@ -32,16 +36,11 @@ export async function calcularFrequenciaGeral(dataSelecionada: string): Promise<
       classesConsultadasSet.add(dados.classe);
     }
     
-    // Se houver lista de IDs de alunos presentes na chamada
     if (Array.isArray(dados.alunosPresentesIds)) {
       dados.alunosPresentesIds.forEach((id: string) => presentesIdsSet.add(id));
-    } else if (typeof dados.totalPresentesAlunos === 'number') {
-      // Fallback caso a estrutura armazene apenas o número total na classe
-      // (Nota: Idealmente usar IDs únicos para evitar duplicidade, mas respeita o acumulado se necessário)
     }
   });
 
-  // Se a estrutura salva o total diretamente por classe nas chamadas:
   let totalPresentesAlunos = 0;
   chamadasSnap.docs.forEach(docSnap => {
     const dados = docSnap.data();

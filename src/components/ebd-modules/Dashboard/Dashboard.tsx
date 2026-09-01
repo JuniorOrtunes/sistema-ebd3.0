@@ -15,7 +15,7 @@ export function Dashboard() {
     distribuicaoData,
     evolucaoSemanasData,
   } = useDashboard();
-
+console.log('[DEBUG_DASHBOARD] totalAlunos recebido:', totalAlunos);
   return (
     <div className="space-y-6 pb-10">
       <svg className="absolute w-0 h-0">
