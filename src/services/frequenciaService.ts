@@ -10,15 +10,15 @@ export interface DadosFrequenciaGeral {
 }
 
 export async function calcularFrequenciaGeral(dataSelecionada: string): Promise<DadosFrequenciaGeral> {
-  // 1. Buscar total global de alunos ativos (Denominador fixo)
+// 1. Buscar total global de alunos ativos (Denominador fixo)
   const alunosRef = collection(db, 'alunos');
   const alunosSnap = await getDocs(alunosRef);
   
   const alunosAtivos = alunosSnap.docs
     .map(doc => ({ id: doc.id, ...doc.data() } as any))
     .filter(aluno => {
-      const status = String(aluno.status || '').trim();
-      return status !== 'Inativo';
+      const situacaoStr = String(aluno.situacao || aluno.status || '').trim().toLowerCase();
+      return situacaoStr !== 'inativo';
     });
   
   const totalGeralMatriculados = alunosAtivos.length;
