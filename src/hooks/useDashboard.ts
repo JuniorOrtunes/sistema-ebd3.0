@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
+import { calcularFrequenciaGeral } from '../services/frequenciaService';
 
 // Paleta oficial exata com 9 cores rigorosamente contrastantes por turma
 const HEX_CORES_CLASSES = [
@@ -54,17 +55,16 @@ export function useDashboard() {
   const [evolucaoSemanasData, setEvolucaoSemanasData] = useState<any[]>([]);
 
   useEffect(() => {
-    let alunosAtivosCount = 0;
     let listaChamadasGlobal: any[] = [];
 
-    const recalcularMetricas = (totalAtivos: number, listaChamadas: any[]) => {
+    const atualizarMetricasDashboard = async (listaChamadas: any[]) => {
       if (listaChamadas.length > 0) {
         const datasUnicas = Array.from(new Set(listaChamadas.map((c: any) => c.data))).filter(Boolean) as string[];
         datasUnicas.sort().reverse();
         const ultimaData = datasUnicas[0];
 
+        // Chamadas da última aula para somar presentes e visitantes locais
         const chamadasUltimaAula = listaChamadas.filter((cls: any) => cls.data === ultimaData);
-
         let sumPresentesUltima = 0;
         let sumVisitantesUltima = 0;
 
@@ -76,8 +76,9 @@ export function useDashboard() {
         setTotalPresentes(sumPresentesUltima);
         setTotalVisitantes(sumVisitantesUltima);
 
-        const geralUltima = totalAtivos > 0 ? Number(((sumPresentesUltima / totalAtivos) * 100).toFixed(2)) : 0;
-        setPercentualPresenca(geralUltima);
+        // Utilizando o serviço unificado para obter o percentual exato com o denominador global (222)
+        const resultadoFrequencia = await calcularFrequenciaGeral(ultimaData);
+        setPercentualPresenca(resultadoFrequencia.percentualFrequencia);
       } else {
         setTotalPresentes(0);
         setTotalVisitantes(0);
@@ -86,11 +87,11 @@ export function useDashboard() {
     };
 
     const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
-      const listaAlunos = snapshot.docs.map(doc => doc.data());
+      const listaAlunos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
       
-      const alunosAtivos = listaAlunos.filter(a => !a.situacao || a.situacao === 'Ativo' || a.ativo === true);
-      alunosAtivosCount = alunosAtivos.length;
-      setTotalAlunos(alunosAtivosCount);
+      // Critério estrito e unificado idêntico ao useEncerramento
+      const alunosAtivos = listaAlunos.filter(aluno => aluno.status !== 'Inativo');
+      setTotalAlunos(alunosAtivos.length);
 
       const profsNosAlunos = listaAlunos.filter(a => a.eProfessor).length;
       setTotalProfessores(profsNosAlunos);
@@ -109,10 +110,6 @@ export function useDashboard() {
 
       barData.sort((a, b) => ordenarTurmas(a, b, 'name'));
       setDistribuicaoData(barData);
-
-      if (listaChamadasGlobal.length > 0) {
-        recalcularMetricas(alunosAtivosCount, listaChamadasGlobal);
-      }
     });
 
     const unsubClasses = onSnapshot(collection(db, 'classes'), (snapshot) => {
@@ -124,7 +121,7 @@ export function useDashboard() {
     const unsubChamadas = onSnapshot(collection(db, 'chamadas'), (snapshot) => {
       listaChamadasGlobal = snapshot.docs.map(doc => doc.data());
 
-      recalcularMetricas(alunosAtivosCount, listaChamadasGlobal);
+      atualizarMetricasDashboard(listaChamadasGlobal);
 
       let chartData = listaChamadasGlobal.map((cls: any) => {
         const presentes = cls.totalPresentesAlunos || 0;
