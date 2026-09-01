@@ -29,9 +29,9 @@ export function useEncerramento() {
   const [dataSelecionada, setDataSelecionada] = useState(new Date().toISOString().split('T')[0]);
   const [ebdEncerrada, setEbdEncerrada] = useState(false);
   const [classesEBD, setClassesEBD] = useState<ClasseItem[]>([]);
-  const [todasAsClasses, setTodasAsClasses] = useState<ClasseItem[]>([]);
   const [visitantesDia, setVisitantesDia] = useState<VisitanteItem[]>([]);
   const [aniversariantesSemana, setAniversariantesSemana] = useState<AniversarianteItem[]>([]);
+  const [totalGeralMatriculados, setTotalGeralMatriculados] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // 1. REALTIME: Sincronização em tempo real de Classes, Chamadas e Fechamentos
@@ -43,7 +43,6 @@ export function useEncerramento() {
 
     const unsubClasses = onSnapshot(collection(db, 'classes'), (classesSnap) => {
       classesMap = {};
-      const listaGlobal: ClasseItem[] = [];
       
       classesSnap.docs.forEach(docSnap => {
         const dados = docSnap.data();
@@ -56,10 +55,8 @@ export function useEncerramento() {
           visitantes: 0,
         };
         classesMap[nomeClasse] = itemClasse;
-        listaGlobal.push(itemClasse);
       });
 
-      setTodasAsClasses(listaGlobal);
       processarDados(classesMap, chamadasList);
     });
 
@@ -117,10 +114,13 @@ export function useEncerramento() {
     };
   }, [dataSelecionada]);
 
-  // 2. ANIVERSARIANTES: Cálculo, Bodas e Ordenação Crescente
+  // 2. ALUNOS MATRICULADOS E ANIVERSARIANTES
   useEffect(() => {
     const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+      
+      const alunosAtivos = listaAlunos.filter(aluno => aluno.status !== 'Inativo');
+      setTotalGeralMatriculados(alunosAtivos.length);
       
       if (!dataSelecionada) return;
 
@@ -241,7 +241,6 @@ export function useEncerramento() {
         await deleteDoc(fechamentoRef);
 
         const q = query(collection(db, 'chamadas'), where('data', '==', dataSelecionada));
-        // Correção aplicada: Adicionado await na chamada getDocs para evitar falha assíncrona
         const querySnapshot = await getDocs(q);
         
         const promessasExclusao = querySnapshot.docs.map((documento) => 
@@ -259,14 +258,11 @@ export function useEncerramento() {
     }
   };
 
-  // Denominador: Total geral de alunos matriculados em TODAS as classes cadastradas na EBD
-  const totalMatriculados = todasAsClasses.reduce((acc, c) => acc + (c.matriculados || 0), 0);
   const totalPresentesAlunos = classesEBD.reduce((acc, c) => acc + (c.presentes || 0), 0);
   const totalVisitantes = visitantesDia.length;
   const totalGeralPresenca = totalPresentesAlunos + totalVisitantes;
   
-  // Cálculo com precisão de 2 casas decimais
-  const percentualFrequenciaNum = totalMatriculados > 0 ? (totalPresentesAlunos / totalMatriculados) * 100 : 0;
+  const percentualFrequenciaNum = totalGeralMatriculados > 0 ? (totalPresentesAlunos / totalGeralMatriculados) * 100 : 0;
   const percentualFrequencia = Number(percentualFrequenciaNum.toFixed(2));
 
   const nascimentosSemana = aniversariantesSemana.filter((a: any) => a.tipo === 'Nascimento');
