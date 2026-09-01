@@ -41,10 +41,14 @@ export function StatsGrid({
               <span className="text-xs font-semibold text-slate-400 tracking-wider" translate="no">
                 {stat.label}
               </span>
-              <div className="text-3xl font-extrabold text-slate-800">
+             <div className="text-3xl font-extrabold text-slate-800">
+                {stat.isPercentage ? (
+                <span>{stat.value.toFixed(2)}</span>
+            ) : (
                 <AnimatedCounter value={stat.value} duration={1000} />
+            )}
                 {stat.isPercentage && <span className="text-lg font-bold text-slate-500 ml-1">%</span>}
-              </div>
+            </div>
             </div>
             <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
               <Icon className="w-6 h-6" />
