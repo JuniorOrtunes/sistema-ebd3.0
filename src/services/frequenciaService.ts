@@ -10,33 +10,17 @@ export interface DadosFrequenciaGeral {
 }
 
 export async function calcularFrequenciaGeral(dataSelecionada: string): Promise<DadosFrequenciaGeral> {
-  // 1. Buscar total global de alunos (Denominador fixo)
+  // 1. Buscar total global de alunos ativos (Denominador fixo)
   const alunosRef = collection(db, 'alunos');
   const alunosSnap = await getDocs(alunosRef);
-  
-  // Diagnóstico para ver o que realmente está gravado no Firestore
-  const statusContagem: Record<string, number> = {};
   
   const alunosAtivos = alunosSnap.docs
     .map(doc => ({ id: doc.id, ...doc.data() } as any))
     .filter(aluno => {
-      const s = String(aluno.status || aluno.situacao || aluno.estado || 'SEM_STATUS').trim();
-      statusContagem[s] = (statusContagem[s] || 0) + 1;
-
-      const statusStr = String(aluno.status || '').trim().toLowerCase();
-      const situacaoStr = String(aluno.situacao || '').trim().toLowerCase();
-      
-      const isInativo = 
-        statusStr === 'inativo' || 
-        statusStr === 'desligado' || 
-        situacaoStr === 'inativo' || 
-        situacaoStr === 'desligado' || 
-        aluno.ativo === false;
-      
-      return !isInativo;
+      const status = String(aluno.status || '').trim();
+      return status !== 'Inativo';
     });
-
-  console.log('[DIAGNOSTICO_STATUS_ALUNOS]', statusContagem);
+  
   const totalGeralMatriculados = alunosAtivos.length;
 
   // 2. Buscar chamadas da data específica (Numerador com unicidade por ID)
