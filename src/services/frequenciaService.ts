@@ -14,18 +14,29 @@ export async function calcularFrequenciaGeral(dataSelecionada: string): Promise<
   const alunosRef = collection(db, 'alunos');
   const alunosSnap = await getDocs(alunosRef);
   
+  // Diagnóstico para ver o que realmente está gravado no Firestore
+  const statusContagem: Record<string, number> = {};
+  
   const alunosAtivos = alunosSnap.docs
     .map(doc => ({ id: doc.id, ...doc.data() } as any))
     .filter(aluno => {
-      // Normaliza possíveis variações de campos e valores de inatividade
+      const s = String(aluno.status || aluno.situacao || aluno.estado || 'SEM_STATUS').trim();
+      statusContagem[s] = (statusContagem[s] || 0) + 1;
+
       const statusStr = String(aluno.status || '').trim().toLowerCase();
       const situacaoStr = String(aluno.situacao || '').trim().toLowerCase();
       
-      const isInativo = statusStr === 'inativo' || situacaoStr === 'inativo' || aluno.ativo === false;
+      const isInativo = 
+        statusStr === 'inativo' || 
+        statusStr === 'desligado' || 
+        situacaoStr === 'inativo' || 
+        situacaoStr === 'desligado' || 
+        aluno.ativo === false;
       
       return !isInativo;
     });
-  
+
+  console.log('[DIAGNOSTICO_STATUS_ALUNOS]', statusContagem);
   const totalGeralMatriculados = alunosAtivos.length;
 
   // 2. Buscar chamadas da data específica (Numerador com unicidade por ID)
@@ -41,16 +52,11 @@ export async function calcularFrequenciaGeral(dataSelecionada: string): Promise<
       classesConsultadasSet.add(dados.classe);
     }
     
-    // Se houver lista de IDs de alunos presentes na chamada
     if (Array.isArray(dados.alunosPresentesIds)) {
       dados.alunosPresentesIds.forEach((id: string) => presentesIdsSet.add(id));
-    } else if (typeof dados.totalPresentesAlunos === 'number') {
-      // Fallback caso a estrutura armazene apenas o número total na classe
-      // (Nota: Idealmente usar IDs únicos para evitar duplicidade, mas respeita o acumulado se necessário)
     }
   });
 
-  // Se a estrutura salva o total diretamente por classe nas chamadas:
   let totalPresentesAlunos = 0;
   chamadasSnap.docs.forEach(docSnap => {
     const dados = docSnap.data();
