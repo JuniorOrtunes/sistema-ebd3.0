@@ -11,8 +11,6 @@ interface SidebarProps {
 export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: SidebarProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  // Estados para controlar quais menus dropdown estão abertos
-  // Se a aba ativa pertencer a um grupo, podemos deixá-lo aberto por padrão
   const [cadastrosOpen, setCadastrosOpen] = useState(
     ['alunos', 'superintendentes', 'hinos', 'classes'].includes(abaAtiva)
   );
@@ -23,7 +21,7 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
 
   const handleSelectTab = (id: string) => {
     setAbaAtiva(id);
-    setIsMobileOpen(false); // Fecha o menu no celular automaticamente ao clicar em uma aba
+    setIsMobileOpen(false);
   };
 
   return (
@@ -43,7 +41,6 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
         </button>
       </div>
 
-      {/* Overlay Escuro para o fundo quando o menu estiver aberto no celular */}
       {isMobileOpen && (
         <div 
           className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm transition-opacity"
@@ -51,7 +48,6 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
         />
       )}
 
-      {/* Conteúdo da Sidebar (Gaveta no Celular / Fixa no Desktop) */}
       <aside className={`
         fixed md:static inset-y-0 left-0 z-50 
         w-64 bg-blue-950 text-white flex flex-col h-full 
@@ -60,7 +56,6 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         
-        {/* Cabeçalho com o Logo SIBO e Nome do Usuário */}
         <div className="p-6 border-b border-blue-900/40 bg-blue-900/20 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -74,7 +69,6 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
                 <span className="text-xs font-medium text-yellow-400">Gestão Educacional</span>
               </div>
             </div>
-            {/* Botão de fechar dentro da gaveta no mobile */}
             <button 
               onClick={() => setIsMobileOpen(false)}
               className="md:hidden text-blue-300 hover:text-white p-1"
@@ -83,7 +77,6 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
             </button>
           </div>
 
-          {/* Nome do Usuário Logado */}
           {usuarioLogadoNome && (
             <div className="pt-2 border-t border-blue-900/40 flex items-center justify-between">
               <div className="truncate">
@@ -110,19 +103,6 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
           >
             <LayoutDashboard className={`w-5 h-5 ${abaAtiva === 'dashboard' ? 'text-blue-950' : 'text-yellow-400'}`} />
             <span translate="no" className="notranslate">Dashboard</span>
-          </button>
-
-          {/* Chamada */}
-          <button
-            onClick={() => handleSelectTab('chamada')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-              abaAtiva === 'chamada' 
-                ? 'bg-yellow-400 text-blue-950 font-bold shadow-md shadow-yellow-400/10' 
-                : 'text-blue-100/80 hover:bg-blue-900/50 hover:text-white'
-            }`}
-          >
-            <ClipboardCheck className={`w-5 h-5 ${abaAtiva === 'chamada' ? 'text-blue-950' : 'text-yellow-400'}`} />
-            <span translate="no" className="notranslate">Chamada</span>
           </button>
 
           {/* Menu Agrupado: Cadastros */}
@@ -246,7 +226,7 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
 
         </nav>
 
-        {/* Rodapé da Sidebar com Botão de Sair e Versão */}
+        {/* Rodapé da Sidebar */}
         <div className="p-4 border-t border-blue-900/40 space-y-3">
           <button
             onClick={() => {
