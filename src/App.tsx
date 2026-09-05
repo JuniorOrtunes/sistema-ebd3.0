@@ -11,6 +11,7 @@ import Login from './components/Login';
 import Chamada from './components/Chamada';
 import { db } from './firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { EmConstrucao } from './components/EmConstrucao';
 
 export default function App() {
   const [perfilLogado, setPerfilLogado] = useState<'nenhum' | 'professor' | 'superintendencia'>(() => {
@@ -234,12 +235,17 @@ export default function App() {
         onLogout={() => setPerfilLogado('nenhum')}
     />
 
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
+<main className="flex-1 overflow-y-auto p-4 md:p-8">
         {abaAtiva === 'dashboard' && <Dashboard />}
         {abaAtiva === 'alunos' && <Alunos />}
         {abaAtiva === 'classes' && <ClassesModule />}
         {abaAtiva === 'encerramento' && <Encerramento />}
         {abaAtiva === 'comparativos' && <Comparativos />}
+        
+        {/* Abas utilizando o componente EmConstrucao */}
+        {abaAtiva === 'hinos' && <EmConstrucao titulo="Cadastro de Hinos" onVoltarParaDashboard={() => setAbaAtiva('dashboard')} />}
+        {abaAtiva === 'relatorio-alunos' && <EmConstrucao titulo="Relatório Geral de Alunos" onVoltarParaDashboard={() => setAbaAtiva('dashboard')} />}
+        {abaAtiva === 'relatorio-aniversariantes' && <EmConstrucao titulo="Relatório de Aniversariantes" onVoltarParaDashboard={() => setAbaAtiva('dashboard')} />}
 
         {abaAtiva === 'superintendentes' && (
           <div className="space-y-6">
