@@ -5,7 +5,7 @@ import { ClassesModule } from './components/ebd-modules/Classes';
 import { Alunos } from './components/ebd-modules/Alunos';
 import { Encerramento } from './components/ebd-modules/Encerramento/Encerramento';
 import { Comparativos } from './components/ebd-modules/Comparativos';
-import { SuperintendentesModule } from './components/ebd-modules/Superintendentes';
+import { Superintendentes } from './components/ebd-modules/Superintendentes';
 import Login from './components/Login';
 import Chamada from './components/Chamada';
 import { EmConstrucao } from './components/EmConstrucao';
@@ -88,7 +88,7 @@ export default function App() {
         {abaAtiva === 'classes' && <ClassesModule />}
         {abaAtiva === 'encerramento' && <Encerramento />}
         {abaAtiva === 'comparativos' && <Comparativos />}
-        {abaAtiva === 'superintendentes' && <SuperintendentesModule />}
+        {abaAtiva === 'superintendentes' && <Superintendentes />}
         
         {/* Abas utilizando o componente EmConstrucao */}
         {abaAtiva === 'hinos' && <EmConstrucao titulo="Cadastro de Hinos" onVoltarParaDashboard={() => setAbaAtiva('dashboard')} />}
