@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { Superintendente } from './lib/ebd';
 import { Sidebar } from './components/layout/Sidebar';
 import { Dashboard } from './components/ebd-modules/Dashboard/Dashboard';
 import { ClassesModule } from './components/ebd-modules/Classes';
@@ -8,6 +9,8 @@ import { Comparativos } from './components/ebd-modules/Comparativos';
 import { Superintendentes } from './components/ebd-modules/Superintendentes';
 import Login from './components/Login';
 import Chamada from './components/Chamada';
+import { db } from './firebase';
+import { collection, getDocs } from 'firebase/firestore';
 import { EmConstrucao } from './components/EmConstrucao';
 
 export default function App() {
@@ -18,6 +21,8 @@ export default function App() {
   const [classeAtivaProfessor, setClasseAtivaProfessor] = useState<string>(() => {
     return localStorage.getItem('ebd_classe_professor') || '';
   });
+
+  const [superintendentes, setSuperintendentes] = useState<Superintendente[]>([]);
 
   useEffect(() => {
     localStorage.setItem('ebd_perfil_logado', perfilLogado);
@@ -31,12 +36,30 @@ export default function App() {
     }
   }, [classeAtivaProfessor]);
 
+  // Carregar superintendentes para permitir o login corretamente
+  useEffect(() => {
+    async function carregarSuperintendentes() {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'superintendentes'));
+        const lista: Superintendente[] = querySnapshot.docs.map(docSnap => ({
+          id: docSnap.id,
+          ...docSnap.data()
+        })) as Superintendente[];
+        
+        setSuperintendentes(lista);
+      } catch (error) {
+        console.error("Erro ao carregar superintendentes para login:", error);
+      }
+    }
+    carregarSuperintendentes();
+  }, []);
+
   const [abaAtiva, setAbaAtiva] = useState('dashboard');
 
   if (perfilLogado === 'nenhum') {
     return (
       <Login 
-        superintendentes={[]} 
+        superintendentes={superintendentes} 
         onLoginProfessor={(classe: string) => {
           setClasseAtivaProfessor(classe);
           setPerfilLogado('professor');
