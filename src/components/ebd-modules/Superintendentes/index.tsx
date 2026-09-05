@@ -1,41 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import type { Superintendente } from '../../../lib/ebd';
-import { UserPlus, Key, Eye, EyeOff, X, Trash2 } from 'lucide-react';
+import { UserPlus, Key, Eye, EyeOff, X } from 'lucide-react';
 import { db } from '../../../firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
-export function SuperintendentesModule() {
+export function Superintendentes() {
   const [superintendentes, setSuperintendentes] = useState<Superintendente[]>([]);
+  const [carregando, setCarregando] = useState(true);
+
+  // Modais e Estados do Formulário
   const [modalAberto, setModalAberto] = useState(false);
   const [modalSenhaAberto, setModalSenhaAberto] = useState(false);
+  
   const [editandoId, setEditandoId] = useState<string | null>(null);
- 
-  const [nome, setNome] = useState('');
-  const [usuario, setUsuario] = useState('');
+  const [idSenhaSelecionada, setIdSenhaSelecionada] = useState<string | null>(null);
+
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
 
+  const [nome, setNome] = useState('');
+  const [usuario, setUsuario] = useState('');
+
+  // Estados para mostrar/ocultar senha
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
 
-  // Carregar superintendentes do Firestore ao iniciar
-  useEffect(() => {
-    async function carregarSuperintendentes() {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'superintendentes'));
-        const lista: Superintendente[] = querySnapshot.docs.map(docSnap => ({
-          id: docSnap.id,
-          ...docSnap.data()
-        })) as Superintendente[];
-        
-        setSuperintendentes(lista);
-      } catch (error) {
-        console.error("Erro ao carregar superintendentes:", error);
-      }
+  // Buscar superintendentes do Firebase ao carregar a tela
+  const carregarSuperintendentes = async () => {
+    try {
+      setCarregando(true);
+      const querySnapshot = await getDocs(collection(db, 'superintendentes'));
+      const lista: Superintendente[] = [];
+      querySnapshot.forEach((documento) => {
+        const data = documento.data();
+        lista.push({
+          id: documento.id,
+          nome: data.nome || '',
+          usuario: data.usuario || '',
+          dataCadastro: data.dataCadastro || new Date().toLocaleDateString('pt-BR'),
+          isVoce: data.isVoce || false,
+        });
+      });
+      setSuperintendentes(lista);
+    } catch (error) {
+      console.error('Erro ao carregar superintendentes:', error);
+      alert('Erro ao carregar dados do Firebase.');
+    } finally {
+      setCarregando(false);
     }
+  };
+
+  useEffect(() => {
     carregarSuperintendentes();
   }, []);
 
+  // Abrir modal para novo
   const abrirNovo = () => {
     setEditandoId(null);
     setNome('');
@@ -45,6 +64,7 @@ export function SuperintendentesModule() {
     setModalAberto(true);
   };
 
+  // Abrir modal para editar
   const abrirEditar = (sup: Superintendente) => {
     setEditandoId(sup.id);
     setNome(sup.nome);
@@ -54,32 +74,15 @@ export function SuperintendentesModule() {
     setModalAberto(true);
   };
 
-  const abrirAlterarSenha = (_id: string) => {
+  // Abrir modal de alterar senha
+  const abrirAlterarSenha = (id: string) => {
+    setIdSenhaSelecionada(id);
     setSenha('');
     setConfirmarSenha('');
     setModalSenhaAberto(true);
   };
 
-  const toggleAtivo = async (id: string, isVoce?: boolean) => {
-    if (isVoce) {
-      alert('Você não pode desativar seu próprio usuário ativo.');
-      return;
-    }
-    const supAlvo = superintendentes.find(s => s.id === id);
-    if (!supAlvo) return;
-
-    const novoStatus = !supAlvo.ativo;
-
-    try {
-      await updateDoc(doc(db, 'superintendentes', id), { ativo: novoStatus });
-      setSuperintendentes(superintendentes.map(s => 
-        s.id === id ? { ...s, ativo: novoStatus } : s
-      ));
-    } catch (error) {
-      console.error("Erro ao alterar status:", error);
-    }
-  };
-
+  // Salvar Novo ou Edição de Superintendente no Firebase
   const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nome.trim() || !usuario.trim()) {
@@ -99,30 +102,33 @@ export function SuperintendentesModule() {
 
     try {
       if (editandoId) {
-        await updateDoc(doc(db, 'superintendentes', editandoId), { nome, usuario });
-        setSuperintendentes(superintendentes.map(s => s.id === editandoId ? {
-          ...s,
-          nome,
-          usuario
-        } : s));
-      } else {
-        const novo: Omit<Superintendente, 'id'> = {
+        const docRef = doc(db, 'superintendentes', editandoId);
+        await updateDoc(docRef, {
           nome,
           usuario,
+          ...(senha ? { senha } : {}) // Atualiza a senha se foi preenchida
+        });
+      } else {
+        await addDoc(collection(db, 'superintendentes'), {
+          nome,
+          usuario,
+          senha,
           dataCadastro: new Date().toLocaleDateString('pt-BR'),
           isVoce: false,
           ativo: true
-        };
-        const docRef = await addDoc(collection(db, 'superintendentes'), novo);
-        setSuperintendentes([{ id: docRef.id, ...novo }, ...superintendentes]);
+        });
       }
+
       setModalAberto(false);
+      await carregarSuperintendentes();
     } catch (error) {
-      console.error("Erro ao salvar superintendente:", error);
+      console.error('Erro ao salvar superintendente:', error);
+      alert('Erro ao salvar no banco de dados.');
     }
   };
 
-  const handleSalvarSenha = (e: React.FormEvent) => {
+  // Salvar Alteração de Senha Isolada no Firebase
+  const handleSalvarSenha = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!senha || senha.length < 6) {
       alert('A senha deve ter no mínimo 6 caracteres.');
@@ -133,27 +139,41 @@ export function SuperintendentesModule() {
       return;
     }
 
-    alert('Senha alterada com sucesso!');
-    setModalSenhaAberto(false);
+    try {
+      if (idSenhaSelecionada) {
+        const docRef = doc(db, 'superintendentes', idSenhaSelecionada);
+        await updateDoc(docRef, { senha });
+      }
+
+      alert('Senha alterada com sucesso!');
+      setModalSenhaAberto(false);
+    } catch (error) {
+      console.error('Erro ao alterar senha:', error);
+      alert('Erro ao atualizar a senha no banco.');
+    }
   };
 
+  // Excluir do Firebase
   const handleExcluir = async (id: string, isVoce?: boolean) => {
     if (isVoce) {
       alert('Você não pode excluir seu próprio usuário ativo.');
       return;
     }
-    if (confirm('Tem certeza que deseja excluir permanentemente este superintendente?')) {
+    if (confirm('Tem certeza que deseja excluir este superintendente?')) {
       try {
         await deleteDoc(doc(db, 'superintendentes', id));
-        setSuperintendentes(superintendentes.filter(s => s.id !== id));
+        await carregarSuperintendentes();
       } catch (error) {
-        console.error("Erro ao excluir:", error);
+        console.error('Erro ao excluir superintendente:', error);
+        alert('Erro ao excluir o registro.');
       }
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-4 md:p-8 space-y-6 bg-gray-50/50 min-h-screen">
+      
+      {/* Cabeçalho da Seção */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -169,74 +189,67 @@ export function SuperintendentesModule() {
           </button>
         </div>
 
+        {/* Lista de Superintendentes */}
         <div className="divide-y divide-gray-100">
-          {superintendentes.map((sup) => (
-            <div key={sup.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 first:pt-0 last:pb-0">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-900 text-sm">{sup.nome}</span>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${sup.ativo !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                    {sup.ativo !== false ? 'ATIVO' : 'INATIVO'}
-                  </span>
-                  {sup.isVoce && (
-                    <span className="px-2 py-0.5 bg-gray-100 text-slate-600 rounded-full text-[10px] font-medium">
-                      você
-                    </span>
-                  )}
+          {carregando ? (
+            <p className="py-4 text-sm text-slate-500 text-center">Carregando superintendentes...</p>
+          ) : superintendentes.length === 0 ? (
+            <p className="py-4 text-sm text-slate-500 text-center">Nenhum superintendente cadastrado.</p>
+          ) : (
+            superintendentes.map((sup) => (
+              <div key={sup.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 first:pt-0 last:pb-0">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-900 text-sm">{sup.nome}</span>
+                    {sup.isVoce && (
+                      <span className="px-2 py-0.5 bg-gray-100 text-slate-600 rounded-full text-[10px] font-medium">
+                        você
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    usuário: {sup.usuario} · cadastrado em {sup.dataCadastro}
+                  </p>
                 </div>
-                <p className="text-xs text-slate-500">
-                  usuário: {sup.usuario} · cadastrado em {sup.dataCadastro}
-                </p>
+
+                {/* Botões de Ação da Lista */}
+                <div className="flex items-center gap-2 self-end sm:self-center">
+                  <button 
+                    onClick={() => abrirEditar(sup)}
+                    className="px-4 py-2 border border-gray-200 text-slate-700 hover:bg-gray-50 rounded-xl text-xs font-medium transition-all"
+                  >
+                    Editar
+                  </button>
+
+                  <button 
+                    onClick={() => abrirAlterarSenha(sup.id)}
+                    className="px-4 py-2 border border-gray-200 text-slate-700 hover:bg-gray-50 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5"
+                  >
+                    <Key className="w-3.5 h-3.5 text-slate-500" />
+                    Alterar senha
+                  </button>
+
+                  <button 
+                    onClick={() => handleExcluir(sup.id, sup.isVoce)}
+                    className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
+                      sup.isVoce 
+                        ? 'bg-rose-300 text-white cursor-not-allowed' 
+                        : 'bg-rose-400 hover:bg-rose-500 text-white shadow-sm'
+                    }`}
+                  >
+                    Excluir
+                  </button>
+                </div>
               </div>
-
-              <div className="flex items-center gap-2 self-end sm:self-center">
-                <button 
-                  onClick={() => toggleAtivo(sup.id, sup.isVoce)}
-                  className={`px-3 py-2 border rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
-                    sup.ativo !== false 
-                      ? 'border-amber-200 text-amber-700 hover:bg-amber-50' 
-                      : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
-                  }`}
-                  title={sup.ativo !== false ? "Desativar acesso" : "Ativar acesso"}
-                >
-                  {sup.ativo !== false ? 'Desativar' : 'Ativar'}
-                </button>
-
-                <button 
-                  onClick={() => abrirEditar(sup)}
-                  className="px-4 py-2 border border-gray-200 text-slate-700 hover:bg-gray-50 rounded-xl text-xs font-medium transition-all"
-                >
-                  Editar
-                </button>
-
-                <button 
-                  onClick={() => abrirAlterarSenha(sup.id)}
-                  className="px-4 py-2 border border-gray-200 text-slate-700 hover:bg-gray-50 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5"
-                >
-                  <Key className="w-3.5 h-3.5 text-slate-500" />
-                  Alterar senha
-                </button>
-
-                <button 
-                  onClick={() => handleExcluir(sup.id, sup.isVoce)}
-                  className={`p-2 rounded-xl text-xs font-medium transition-all ${
-                    sup.isVoce 
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                      : 'bg-rose-50 hover:bg-rose-100 text-rose-600'
-                  }`}
-                  title="Excluir permanentemente"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 
+      {/* MODAL: NOVO / EDITAR SUPERINTENDENTE */}
       {modalAberto && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-gray-100 p-6 space-y-5">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-gray-100 p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900">
                 {editandoId ? 'Editar Superintendente' : 'Novo Superintendente'}
@@ -325,7 +338,7 @@ export function SuperintendentesModule() {
                 </button>
                 <button 
                   type="submit"
-                  className="px-6 py-2.5 bg-[#0A192F] text-white rounded-xl text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm"
+                  className="px-6 py-2.5 bg-slate-500 text-white rounded-xl text-sm font-medium hover:bg-slate-600 transition-colors shadow-sm"
                 >
                   {editandoId ? 'Salvar Alterações' : 'Criar acesso'}
                 </button>
@@ -335,9 +348,10 @@ export function SuperintendentesModule() {
         </div>
       )}
 
+      {/* MODAL: ALTERAR SENHA ISOLADA */}
       {modalSenhaAberto && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-gray-100 p-6 space-y-5">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-gray-100 p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900">Alterar Senha</h3>
               <button onClick={() => setModalSenhaAberto(false)} className="text-slate-400 hover:text-slate-600">
@@ -397,7 +411,7 @@ export function SuperintendentesModule() {
                 </button>
                 <button 
                   type="submit"
-                  className="px-6 py-2.5 bg-[#0A192F] text-white rounded-xl text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm"
+                  className="px-6 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm"
                 >
                   Atualizar senha
                 </button>
@@ -406,6 +420,7 @@ export function SuperintendentesModule() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
