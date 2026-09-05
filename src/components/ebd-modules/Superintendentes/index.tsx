@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import type { Superintendente } from '../../lib/ebd';
+import React, { useState, useEffect } from 'react';
+import type { Superintendente } from '../../../lib/ebd';
 import { UserPlus, Key, Eye, EyeOff, X } from 'lucide-react';
+import { db } from '../../../firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
 export function Superintendentes() {
-  const [superintendentes, setSuperintendentes] = useState<Superintendente[]>([
-    { id: '1', nome: 'Carlos Ortunes Junior', usuario: 'ortunes', dataCadastro: '05/08/2026', isVoce: true },
-    { id: '2', nome: 'Geral teste', usuario: 'teste', dataCadastro: '05/08/2026', isVoce: false },
-  ]);
+  const [superintendentes, setSuperintendentes] = useState<Superintendente[]>([]);
+  const [carregando, setCarregando] = useState(true);
 
   // Modais e Estados do Formulário
   const [modalAberto, setModalAberto] = useState(false);
@@ -24,6 +24,35 @@ export function Superintendentes() {
   // Estados para mostrar/ocultar senha
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
+
+  // Buscar superintendentes do Firebase ao carregar a tela
+  const carregarSuperintendentes = async () => {
+    try {
+      setCarregando(true);
+      const querySnapshot = await getDocs(collection(db, 'superintendentes'));
+      const lista: Superintendente[] = [];
+      querySnapshot.forEach((documento) => {
+        const data = documento.data();
+        lista.push({
+          id: documento.id,
+          nome: data.nome || '',
+          usuario: data.usuario || '',
+          dataCadastro: data.dataCadastro || new Date().toLocaleDateString('pt-BR'),
+          isVoce: data.isVoce || false,
+        });
+      });
+      setSuperintendentes(lista);
+    } catch (error) {
+      console.error('Erro ao carregar superintendentes:', error);
+      alert('Erro ao carregar dados do Firebase.');
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  useEffect(() => {
+    carregarSuperintendentes();
+  }, []);
 
   // Abrir modal para novo
   const abrirNovo = () => {
@@ -53,8 +82,8 @@ export function Superintendentes() {
     setModalSenhaAberto(true);
   };
 
-  // Salvar Novo ou Edição de Superintendente
-  const handleSalvar = (e: React.FormEvent) => {
+  // Salvar Novo ou Edição de Superintendente no Firebase
+  const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nome.trim() || !usuario.trim()) {
       alert('Preencha todos os campos obrigatórios.');
@@ -71,28 +100,35 @@ export function Superintendentes() {
       return;
     }
 
-    if (editandoId) {
-      setSuperintendentes(superintendentes.map(s => s.id === editandoId ? {
-        ...s,
-        nome,
-        usuario
-      } : s));
-    } else {
-      const novo: Superintendente = {
-        id: Date.now().toString(),
-        nome,
-        usuario,
-        dataCadastro: new Date().toLocaleDateString('pt-BR'),
-        isVoce: false
-      };
-      setSuperintendentes([novo, ...superintendentes]);
-    }
+    try {
+      if (editandoId) {
+        const docRef = doc(db, 'superintendentes', editandoId);
+        await updateDoc(docRef, {
+          nome,
+          usuario,
+          ...(senha ? { senha } : {}) // Atualiza a senha se foi preenchida
+        });
+      } else {
+        await addDoc(collection(db, 'superintendentes'), {
+          nome,
+          usuario,
+          senha,
+          dataCadastro: new Date().toLocaleDateString('pt-BR'),
+          isVoce: false,
+          ativo: true
+        });
+      }
 
-    setModalAberto(false);
+      setModalAberto(false);
+      await carregarSuperintendentes();
+    } catch (error) {
+      console.error('Erro ao salvar superintendente:', error);
+      alert('Erro ao salvar no banco de dados.');
+    }
   };
 
-  // Salvar Alteração de Senha Isolada
-  const handleSalvarSenha = (e: React.FormEvent) => {
+  // Salvar Alteração de Senha Isolada no Firebase
+  const handleSalvarSenha = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!senha || senha.length < 6) {
       alert('A senha deve ter no mínimo 6 caracteres.');
@@ -103,22 +139,34 @@ export function Superintendentes() {
       return;
     }
 
-    if (idSenhaSelecionada) {
-      // Atualização de senha para o ID selecionado
-    }
+    try {
+      if (idSenhaSelecionada) {
+        const docRef = doc(db, 'superintendentes', idSenhaSelecionada);
+        await updateDoc(docRef, { senha });
+      }
 
-    alert('Senha alterada com sucesso!');
-    setModalSenhaAberto(false);
+      alert('Senha alterada com sucesso!');
+      setModalSenhaAberto(false);
+    } catch (error) {
+      console.error('Erro ao alterar senha:', error);
+      alert('Erro ao atualizar a senha no banco.');
+    }
   };
 
-  // Excluir
-  const handleExcluir = (id: string, isVoce?: boolean) => {
+  // Excluir do Firebase
+  const handleExcluir = async (id: string, isVoce?: boolean) => {
     if (isVoce) {
       alert('Você não pode excluir seu próprio usuário ativo.');
       return;
     }
     if (confirm('Tem certeza que deseja excluir este superintendente?')) {
-      setSuperintendentes(superintendentes.filter(s => s.id !== id));
+      try {
+        await deleteDoc(doc(db, 'superintendentes', id));
+        await carregarSuperintendentes();
+      } catch (error) {
+        console.error('Erro ao excluir superintendente:', error);
+        alert('Erro ao excluir o registro.');
+      }
     }
   };
 
@@ -143,52 +191,58 @@ export function Superintendentes() {
 
         {/* Lista de Superintendentes */}
         <div className="divide-y divide-gray-100">
-          {superintendentes.map((sup) => (
-            <div key={sup.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 first:pt-0 last:pb-0">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-900 text-sm">{sup.nome}</span>
-                  {sup.isVoce && (
-                    <span className="px-2 py-0.5 bg-gray-100 text-slate-600 rounded-full text-[10px] font-medium">
-                      você
-                    </span>
-                  )}
+          {carregando ? (
+            <p className="py-4 text-sm text-slate-500 text-center">Carregando superintendentes...</p>
+          ) : superintendentes.length === 0 ? (
+            <p className="py-4 text-sm text-slate-500 text-center">Nenhum superintendente cadastrado.</p>
+          ) : (
+            superintendentes.map((sup) => (
+              <div key={sup.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 first:pt-0 last:pb-0">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-900 text-sm">{sup.nome}</span>
+                    {sup.isVoce && (
+                      <span className="px-2 py-0.5 bg-gray-100 text-slate-600 rounded-full text-[10px] font-medium">
+                        você
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    usuário: {sup.usuario} · cadastrado em {sup.dataCadastro}
+                  </p>
                 </div>
-                <p className="text-xs text-slate-500">
-                  usuário: {sup.usuario} · cadastrado em {sup.dataCadastro}
-                </p>
+
+                {/* Botões de Ação da Lista */}
+                <div className="flex items-center gap-2 self-end sm:self-center">
+                  <button 
+                    onClick={() => abrirEditar(sup)}
+                    className="px-4 py-2 border border-gray-200 text-slate-700 hover:bg-gray-50 rounded-xl text-xs font-medium transition-all"
+                  >
+                    Editar
+                  </button>
+
+                  <button 
+                    onClick={() => abrirAlterarSenha(sup.id)}
+                    className="px-4 py-2 border border-gray-200 text-slate-700 hover:bg-gray-50 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5"
+                  >
+                    <Key className="w-3.5 h-3.5 text-slate-500" />
+                    Alterar senha
+                  </button>
+
+                  <button 
+                    onClick={() => handleExcluir(sup.id, sup.isVoce)}
+                    className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
+                      sup.isVoce 
+                        ? 'bg-rose-300 text-white cursor-not-allowed' 
+                        : 'bg-rose-400 hover:bg-rose-500 text-white shadow-sm'
+                    }`}
+                  >
+                    Excluir
+                  </button>
+                </div>
               </div>
-
-              {/* Botões de Ação da Lista */}
-              <div className="flex items-center gap-2 self-end sm:self-center">
-                <button 
-                  onClick={() => abrirEditar(sup)}
-                  className="px-4 py-2 border border-gray-200 text-slate-700 hover:bg-gray-50 rounded-xl text-xs font-medium transition-all"
-                >
-                  Editar
-                </button>
-
-                <button 
-                  onClick={() => abrirAlterarSenha(sup.id)}
-                  className="px-4 py-2 border border-gray-200 text-slate-700 hover:bg-gray-50 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5"
-                >
-                  <Key className="w-3.5 h-3.5 text-slate-500" />
-                  Alterar senha
-                </button>
-
-                <button 
-                  onClick={() => handleExcluir(sup.id, sup.isVoce)}
-                  className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
-                    sup.isVoce 
-                      ? 'bg-rose-300 text-white cursor-not-allowed' 
-                      : 'bg-rose-400 hover:bg-rose-500 text-white shadow-sm'
-                  }`}
-                >
-                  Excluir
-                </button>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 
