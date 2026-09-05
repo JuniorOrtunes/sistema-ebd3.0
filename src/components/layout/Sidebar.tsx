@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Layers, ShieldCheck, ClipboardCheck, TrendingUp, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, Layers, ShieldCheck, ClipboardCheck, TrendingUp, Music, FileText, Calendar, FolderKanban, BarChart3, LogOut, Menu, X, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 
 interface SidebarProps {
@@ -11,14 +11,15 @@ interface SidebarProps {
 export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: SidebarProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'alunos', label: 'Alunos', icon: Users },
-    { id: 'classes', label: 'Classes', icon: Layers },
-    { id: 'comparativos', label: 'Comparativos', icon: TrendingUp },
-    { id: 'superintendentes', label: 'Superintendentes', icon: ShieldCheck },
-    { id: 'encerramento', label: 'Encerramento', icon: ClipboardCheck },
-  ];
+  // Estados para controlar quais menus dropdown estão abertos
+  // Se a aba ativa pertencer a um grupo, podemos deixá-lo aberto por padrão
+  const [cadastrosOpen, setCadastrosOpen] = useState(
+    ['alunos', 'superintendentes', 'hinos', 'classes'].includes(abaAtiva)
+  );
+  
+  const [relatoriosOpen, setRelatoriosOpen] = useState(
+    ['comparativos', 'relatorio-alunos', 'relatorio-aniversariantes'].includes(abaAtiva)
+  );
 
   const handleSelectTab = (id: string) => {
     setAbaAtiva(id);
@@ -97,25 +98,152 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
 
         {/* Navegação */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = abaAtiva === item.id;
-            
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleSelectTab(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                  isActive 
-                    ? 'bg-yellow-400 text-blue-950 font-bold shadow-md shadow-yellow-400/10' 
-                    : 'text-blue-100/80 hover:bg-blue-900/50 hover:text-white'
-                }`}
-              >
-                <Icon className={`w-5 h-5 ${isActive ? 'text-blue-950' : 'text-yellow-400'}`} />
-                <span translate="no" className="notranslate">{item.label}</span>
-              </button>
-            );
-          })}
+          
+          {/* Dashboard */}
+          <button
+            onClick={() => handleSelectTab('dashboard')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+              abaAtiva === 'dashboard' 
+                ? 'bg-yellow-400 text-blue-950 font-bold shadow-md shadow-yellow-400/10' 
+                : 'text-blue-100/80 hover:bg-blue-900/50 hover:text-white'
+            }`}
+          >
+            <LayoutDashboard className={`w-5 h-5 ${abaAtiva === 'dashboard' ? 'text-blue-950' : 'text-yellow-400'}`} />
+            <span translate="no" className="notranslate">Dashboard</span>
+          </button>
+
+          {/* Chamada */}
+          <button
+            onClick={() => handleSelectTab('chamada')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+              abaAtiva === 'chamada' 
+                ? 'bg-yellow-400 text-blue-950 font-bold shadow-md shadow-yellow-400/10' 
+                : 'text-blue-100/80 hover:bg-blue-900/50 hover:text-white'
+            }`}
+          >
+            <ClipboardCheck className={`w-5 h-5 ${abaAtiva === 'chamada' ? 'text-blue-950' : 'text-yellow-400'}`} />
+            <span translate="no" className="notranslate">Chamada</span>
+          </button>
+
+          {/* Menu Agrupado: Cadastros */}
+          <div className="space-y-1">
+            <button
+              onClick={() => setCadastrosOpen(!cadastrosOpen)}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium text-blue-100/80 hover:bg-blue-900/50 hover:text-white transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <FolderKanban className="w-5 h-5 text-yellow-400" />
+                <span>Cadastros</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 transition-transform ${cadastrosOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {cadastrosOpen && (
+              <div className="pl-4 space-y-1 border-l border-blue-900/60 ml-4 my-1">
+                <button
+                  onClick={() => handleSelectTab('alunos')}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                    abaAtiva === 'alunos' ? 'bg-yellow-400 text-blue-950 font-bold' : 'text-blue-200/70 hover:text-white hover:bg-blue-900/30'
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  <span>Alunos</span>
+                </button>
+
+                <button
+                  onClick={() => handleSelectTab('classes')}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                    abaAtiva === 'classes' ? 'bg-yellow-400 text-blue-950 font-bold' : 'text-blue-200/70 hover:text-white hover:bg-blue-900/30'
+                  }`}
+                >
+                  <Layers className="w-4 h-4" />
+                  <span>Classes</span>
+                </button>
+
+                <button
+                  onClick={() => handleSelectTab('superintendentes')}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                    abaAtiva === 'superintendentes' ? 'bg-yellow-400 text-blue-950 font-bold' : 'text-blue-200/70 hover:text-white hover:bg-blue-900/30'
+                  }`}
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Superintendentes</span>
+                </button>
+
+                <button
+                  onClick={() => handleSelectTab('hinos')}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                    abaAtiva === 'hinos' ? 'bg-yellow-400 text-blue-950 font-bold' : 'text-blue-200/70 hover:text-white hover:bg-blue-900/30'
+                  }`}
+                >
+                  <Music className="w-4 h-4" />
+                  <span>Hinos <span className="text-[9px] bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded ml-auto">Em breve</span></span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Menu Agrupado: Relatórios */}
+          <div className="space-y-1">
+            <button
+              onClick={() => setRelatoriosOpen(!relatoriosOpen)}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium text-blue-100/80 hover:bg-blue-900/50 hover:text-white transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <BarChart3 className="w-5 h-5 text-yellow-400" />
+                <span>Relatórios</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 transition-transform ${relatoriosOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {relatoriosOpen && (
+              <div className="pl-4 space-y-1 border-l border-blue-900/60 ml-4 my-1">
+                <button
+                  onClick={() => handleSelectTab('relatorio-alunos')}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                    abaAtiva === 'relatorio-alunos' ? 'bg-yellow-400 text-blue-950 font-bold' : 'text-blue-200/70 hover:text-white hover:bg-blue-900/30'
+                  }`}
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Geral de Alunos <span className="text-[9px] bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded ml-auto">Em breve</span></span>
+                </button>
+
+                <button
+                  onClick={() => handleSelectTab('relatorio-aniversariantes')}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                    abaAtiva === 'relatorio-aniversariantes' ? 'bg-yellow-400 text-blue-950 font-bold' : 'text-blue-200/70 hover:text-white hover:bg-blue-900/30'
+                  }`}
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span>Aniversariantes <span className="text-[9px] bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded ml-auto">Em breve</span></span>
+                </button>
+
+                <button
+                  onClick={() => handleSelectTab('comparativos')}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                    abaAtiva === 'comparativos' ? 'bg-yellow-400 text-blue-950 font-bold' : 'text-blue-200/70 hover:text-white hover:bg-blue-900/30'
+                  }`}
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  <span>Comparativos</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Encerramento */}
+          <button
+            onClick={() => handleSelectTab('encerramento')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+              abaAtiva === 'encerramento' 
+                ? 'bg-yellow-400 text-blue-950 font-bold shadow-md shadow-yellow-400/10' 
+                : 'text-blue-100/80 hover:bg-blue-900/50 hover:text-white'
+            }`}
+          >
+            <ClipboardCheck className={`w-5 h-5 ${abaAtiva === 'encerramento' ? 'text-blue-950' : 'text-yellow-400'}`} />
+            <span translate="no" className="notranslate">Encerramento</span>
+          </button>
+
         </nav>
 
         {/* Rodapé da Sidebar com Botão de Sair e Versão */}
