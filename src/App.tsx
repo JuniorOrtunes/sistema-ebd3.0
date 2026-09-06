@@ -12,7 +12,7 @@ import Chamada from './components/Chamada';
 import { db } from './firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { EmConstrucao } from './components/EmConstrucao';
-import { RelatorioAlunos } from './components/ebd-modules/RelatorioAlunos';
+
 
 export default function App() {
   const [perfilLogado, setPerfilLogado] = useState<'nenhum' | 'professor' | 'superintendencia'>(() => {
@@ -116,7 +116,7 @@ export default function App() {
         
         {/* Abas utilizando o componente EmConstrucao */}
         {abaAtiva === 'hinos' && <EmConstrucao titulo="Cadastro de Hinos" onVoltarParaDashboard={() => setAbaAtiva('dashboard')} />}
-        {abaAtiva === 'relatorio-alunos' && <RelatorioAlunos />}
+        {abaAtiva === 'relatorio-alunos' && <EmConstrucao titulo="Relatório Geral de Alunos" onVoltarParaDashboard={() => setAbaAtiva('dashboard')} />}
         {abaAtiva === 'relatorio-aniversariantes' && <EmConstrucao titulo="Relatório de Aniversariantes" onVoltarParaDashboard={() => setAbaAtiva('dashboard')} />}
       </main>
     </div>

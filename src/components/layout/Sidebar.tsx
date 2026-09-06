@@ -180,12 +180,12 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
               <div className="pl-4 space-y-1 border-l border-blue-900/60 ml-4 my-1">
                 <button
                   onClick={() => handleSelectTab('relatorio-alunos')}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                    abaAtiva === 'relatorio-alunos' ? 'bg-yellow-400 text-blue-950 font-bold' : 'text-blue-200/70 hover:text-white hover:bg-blue-900/30'
-                  }`}
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>Geral de Alunos</span>
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                  abaAtiva === 'relatorio-alunos' ? 'bg-yellow-400 text-blue-950 font-bold' : 'text-blue-200/70 hover:text-white hover:bg-blue-900/30'
+               }`}
+              >
+                <FileText className="w-4 h-4" />
+                <span>Geral de Alunos <span className="text-[9px] bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded ml-auto">Em breve</span></span>
                 </button>
 
                 <button
