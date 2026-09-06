@@ -5,6 +5,8 @@ import { collection, getDocs } from 'firebase/firestore';
 interface Aluno {
   id: string;
   nome: string;
+  telefone?: string;
+  celular?: string;
   status?: 'Ativo' | 'Inativo';
   classe?: string;
   [key: string]: any;
@@ -67,13 +69,14 @@ export function RelatorioAlunos() {
                 <th className="py-3 px-4">#</th>
                 <th className="py-3 px-4">Nome do Aluno</th>
                 <th className="py-3 px-4">Classe</th>
+                <th className="py-3 px-4">Telefone</th>
                 <th className="py-3 px-4 text-center">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
               {alunos.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center py-6 text-slate-400">Nenhum aluno encontrado.</td>
+                  <td colSpan={5} className="text-center py-6 text-slate-400">Nenhum aluno encontrado.</td>
                 </tr>
               ) : (
                 alunos.map((aluno, index) => (
@@ -81,6 +84,7 @@ export function RelatorioAlunos() {
                     <td className="py-3 px-4 text-slate-400 w-12">{index + 1}</td>
                     <td className="py-3 px-4 font-medium text-slate-900">{aluno.nome}</td>
                     <td className="py-3 px-4">{aluno.classe || 'Não informada'}</td>
+                    <td className="py-3 px-4">{aluno.telefone || aluno.celular || 'Não informado'}</td>
                     <td className="py-3 px-4 text-center">
                       <span className={`inline-block px-2.5 py-1 text-xs font-semibold rounded-full ${
                         (aluno.status || 'Ativo') === 'Ativo' 
