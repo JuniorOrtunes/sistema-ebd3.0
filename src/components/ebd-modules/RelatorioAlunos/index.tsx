@@ -48,7 +48,19 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto bg-white rounded-xl shadow-sm space-y-6">
+    <div className="p-6 max-w-6xl mx-auto bg-white rounded-xl shadow-sm space-y-6 print:shadow-none print:p-0 print:max-w-none print:w-full print:m-0">
+      {/* Estilo injetado para garantir quebra de páginas limpa na impressão de múltiplos registros */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          body {
+            background-color: white !important;
+          }
+          tr {
+            page-break-inside: avoid;
+          }
+        }
+      `}} />
+
       {/* Cabeçalho com ações de impressão e voltar (oculto na hora de imprimir) */}
       <div className="flex justify-between items-center border-b pb-4 print:hidden">
         <div className="flex items-center gap-3">
@@ -80,7 +92,7 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
       ) : (
         <div className="overflow-x-auto print:overflow-visible">
           <table className="w-full text-left border-collapse">
-              <thead>
+            <thead>
               <tr className="border-b border-slate-200 text-slate-600 text-xs uppercase tracking-wider bg-slate-50">
                 <th className="py-3 px-4">#</th>
                 <th className="py-3 px-4">Nome do Aluno</th>
