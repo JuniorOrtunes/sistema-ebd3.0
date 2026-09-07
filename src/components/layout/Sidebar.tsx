@@ -15,7 +15,7 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
     ['alunos', 'superintendentes', 'hinos', 'classes'].includes(abaAtiva)
   );
   
-  const [relatoriosOpen] = useState(
+  const [relatoriosOpen, setRelatoriosOpen] = useState(
     ['comparativos', 'relatorio-alunos', 'relatorio-aniversariantes'].includes(abaAtiva)
   );
 
@@ -166,8 +166,8 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
           {/* Menu Agrupado: Relatórios */}
           <div className="space-y-1">
             <button
-              onClick={() => {}}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium text-blue-100/80 hover:bg-blue-900/50 hover:text-white transition-all cursor-default"
+              onClick={() => setRelatoriosOpen(!relatoriosOpen)}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium text-blue-100/80 hover:bg-blue-900/50 hover:text-white transition-all cursor-pointer"
             >
               <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-yellow-400" />
