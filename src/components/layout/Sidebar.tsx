@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Layers, ShieldCheck, ClipboardCheck, TrendingUp, Music, FileText, Calendar, FolderKanban, BarChart3, LogOut, Menu, X, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Users, Layers, ShieldCheck, ClipboardCheck, TrendingUp, Music, FileText, Calendar, FolderKanban, LogOut, Menu, X, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 
 interface SidebarProps {
@@ -167,10 +167,10 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
           <div className="space-y-1">
             <button
               onClick={() => setRelatoriosOpen(!relatoriosOpen)}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium text-blue-100/80 hover:bg-blue-900/50 hover:text-white transition-all"
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium text-blue-100/80 hover:bg-blue-900/50 hover:text-white transition-all cursor-pointer"
             >
               <div className="flex items-center gap-3">
-                <BarChart3 className="w-5 h-5 text-yellow-400" />
+                <FileText className="w-5 h-5 text-yellow-400" />
                 <span>Relatórios</span>
               </div>
               <ChevronDown className={`w-4 h-4 transition-transform ${relatoriosOpen ? 'rotate-180' : ''}`} />
@@ -180,12 +180,12 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
               <div className="pl-4 space-y-1 border-l border-blue-900/60 ml-4 my-1">
                 <button
                   onClick={() => handleSelectTab('relatorio-alunos')}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                  abaAtiva === 'relatorio-alunos' ? 'bg-yellow-400 text-blue-950 font-bold' : 'text-blue-200/70 hover:text-white hover:bg-blue-900/30'
-               }`}
-              >
-                <FileText className="w-4 h-4" />
-                <span>Geral de Alunos <span className="text-[9px] bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded ml-auto">Em breve</span></span>
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                    abaAtiva === 'relatorio-alunos' ? 'bg-yellow-400 text-blue-950 font-bold' : 'text-blue-200/70 hover:text-white hover:bg-blue-900/30'
+                  }`}
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Geral de Alunos</span>
                 </button>
 
                 <button

@@ -7,12 +7,12 @@ import { Alunos } from './components/ebd-modules/Alunos';
 import { Encerramento } from './components/ebd-modules/Encerramento/Encerramento';
 import { Comparativos } from './components/ebd-modules/Comparativos';
 import { Superintendentes } from './components/ebd-modules/Superintendentes';
+import RelatorioAlunos from './components/ebd-modules/RelatorioAlunos';
 import Login from './components/Login';
 import Chamada from './components/Chamada';
 import { db } from './firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { EmConstrucao } from './components/EmConstrucao';
-
 
 export default function App() {
   const [perfilLogado, setPerfilLogado] = useState<'nenhum' | 'professor' | 'superintendencia'>(() => {
@@ -37,7 +37,6 @@ export default function App() {
     }
   }, [classeAtivaProfessor]);
 
-  // Carregar superintendentes para permitir o login corretamente
   useEffect(() => {
     async function carregarSuperintendentes() {
       try {
@@ -106,7 +105,7 @@ export default function App() {
         onLogout={() => setPerfilLogado('nenhum')}
       />
 
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 print:overflow-visible print:h-auto print:p-0">
         {abaAtiva === 'dashboard' && <Dashboard />}
         {abaAtiva === 'alunos' && <Alunos />}
         {abaAtiva === 'classes' && <ClassesModule />}
@@ -114,9 +113,13 @@ export default function App() {
         {abaAtiva === 'comparativos' && <Comparativos />}
         {abaAtiva === 'superintendentes' && <Superintendentes />}
         
-        {/* Abas utilizando o componente EmConstrucao */}
+        {/* Relatório Geral de Alunos conectado ao componente funcional */}
+        {abaAtiva === 'relatorio-alunos' && (
+          <RelatorioAlunos onVoltarParaDashboard={() => setAbaAtiva('dashboard')} />
+        )}
+        
+        {/* Demais itens que continuam em construção */}
         {abaAtiva === 'hinos' && <EmConstrucao titulo="Cadastro de Hinos" onVoltarParaDashboard={() => setAbaAtiva('dashboard')} />}
-        {abaAtiva === 'relatorio-alunos' && <EmConstrucao titulo="Relatório Geral de Alunos" onVoltarParaDashboard={() => setAbaAtiva('dashboard')} />}
         {abaAtiva === 'relatorio-aniversariantes' && <EmConstrucao titulo="Relatório de Aniversariantes" onVoltarParaDashboard={() => setAbaAtiva('dashboard')} />}
       </main>
     </div>
