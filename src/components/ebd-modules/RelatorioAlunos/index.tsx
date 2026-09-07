@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../../firebase';
 import { collection, getDocs } from 'firebase/firestore';
+import { ArrowLeft } from 'lucide-react';
 
 interface Aluno {
   id: string;
@@ -12,7 +13,11 @@ interface Aluno {
   [key: string]: any;
 }
 
-export function RelatorioAlunos() {
+interface RelatorioAlunosProps {
+  onVoltarParaDashboard?: () => void;
+}
+
+export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlunosProps) {
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [carregando, setCarregando] = useState(true);
 
@@ -44,11 +49,22 @@ export function RelatorioAlunos() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto bg-white rounded-xl shadow-sm space-y-6">
-      {/* Cabeçalho com ações de impressão (oculto na hora de imprimir) */}
+      {/* Cabeçalho com ações de impressão e voltar (oculto na hora de imprimir) */}
       <div className="flex justify-between items-center border-b pb-4 print:hidden">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Relatório Geral de Alunos</h1>
-          <p className="text-sm text-slate-500">Escola Bíblica Dominical - Segunda Igreja Batista de Osasco</p>
+        <div className="flex items-center gap-3">
+          {onVoltarParaDashboard && (
+            <button
+              onClick={onVoltarParaDashboard}
+              className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
+              title="Voltar ao Dashboard"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800">Relatório Geral de Alunos</h1>
+            <p className="text-sm text-slate-500">Escola Bíblica Dominical - Segunda Igreja Batista de Osasco</p>
+          </div>
         </div>
         <button
           onClick={handleImprimir}
