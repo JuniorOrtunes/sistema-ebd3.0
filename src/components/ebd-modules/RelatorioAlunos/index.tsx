@@ -9,7 +9,7 @@ interface Aluno {
   nome: string;
   telefone?: string;
   celular?: string;
-  status?: 'Ativo' | 'Inativo';
+  status?: string;
   classe?: string;
   [key: string]: any;
 }
@@ -123,30 +123,35 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
                   <td colSpan={5} className="text-center py-6 text-slate-400">Nenhum aluno encontrado.</td>
                 </tr>
               ) : (
-                alunos.map((aluno, index) => (
-                  <tr key={aluno.id} className="hover:bg-slate-50/80">
-                    <td className="py-3 px-4 text-slate-400 w-12">{index + 1}</td>
-                    <td className="py-3 px-4 font-medium text-slate-900">{aluno.nome}</td>
-                    <td className="py-3 px-4">{aluno.classe || 'Não informada'}</td>
-                    <td className="py-3 px-4">{aluno.telefone || aluno.celular || 'Não informado'}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`inline-block px-2.5 py-1 text-xs font-semibold rounded-full ${
-                        (aluno.status || 'Ativo') === 'Ativo' 
-                          ? 'bg-emerald-100 text-emerald-800' 
-                          : 'bg-rose-100 text-rose-800'
-                      }`}>
-                        {aluno.status || 'Ativo'}
-                      </span>
-                    </td>
-                  </tr>
-                ))
+                alunos.map((aluno, index) => {
+                  const statusAtual = aluno.status || 'Ativo';
+                  const isAtivo = statusAtual === 'Ativo';
+
+                  return (
+                    <tr key={aluno.id} className="hover:bg-slate-50/80">
+                      <td className="py-3 px-4 text-slate-400 w-12">{index + 1}</td>
+                      <td className="py-3 px-4 font-medium text-slate-900">{aluno.nome}</td>
+                      <td className="py-3 px-4">{aluno.classe || 'Não informada'}</td>
+                      <td className="py-3 px-4">{aluno.telefone || aluno.celular || 'Não informado'}</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`inline-block px-2.5 py-1 text-xs font-semibold rounded-full ${
+                          isAtivo 
+                            ? 'bg-emerald-100 text-emerald-800' 
+                            : 'bg-rose-100 text-rose-800'
+                        }`}>
+                          {statusAtual}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* React Portal: Renderiza a tabela de impressão diretamente no body, fora da árvore travada do SPA */}
+      {/* React Portal: Renderiza a tabela de impressão diretamente no body */}
       {imprimindo && createPortal(
         <div className="print-portal-container p-8 bg-white">
           <div className="mb-6 border-b pb-4">
@@ -164,15 +169,20 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
               </tr>
             </thead>
             <tbody>
-              {alunos.map((aluno, index) => (
-                <tr key={aluno.id} className="border-b border-slate-200">
-                  <td className="py-2 px-3 border border-slate-200 text-slate-500 w-12">{index + 1}</td>
-                  <td className="py-2 px-3 border border-slate-200 font-medium text-slate-900">{aluno.nome}</td>
-                  <td className="py-2 px-3 border border-slate-200">{aluno.classe || 'Não informada'}</td>
-                  <td className="py-2 px-3 border border-slate-200">{aluno.telefone || aluno.celular || 'Não informado'}</td>
-                  <td className="py-2 px-3 border border-slate-200 text-center">{aluno.status || 'Ativo'}</td>
-                </tr>
-              ))}
+              {alunos.map((aluno, index) => {
+                const statusAtual = aluno.status || 'Ativo';
+                return (
+                  <tr key={aluno.id} className="border-b border-slate-200">
+                    <td className="py-2 px-3 border border-slate-200 text-slate-500 w-12">{index + 1}</td>
+                    <td className="py-2 px-3 border border-slate-200 font-medium text-slate-900">{aluno.nome}</td>
+                    <td className="py-2 px-3 border border-slate-200">{aluno.classe || 'Não informada'}</td>
+                    <td className="py-2 px-3 border border-slate-200">{aluno.telefone || aluno.celular || 'Não informado'}</td>
+                    <td className="py-2 px-3 border border-slate-200 text-center font-semibold text-xs">
+                      {statusAtual}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>,
