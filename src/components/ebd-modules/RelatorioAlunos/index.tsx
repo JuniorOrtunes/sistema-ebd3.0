@@ -30,9 +30,7 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
           ...doc.data()
         })) as Aluno[];
 
-        // Ordenação alfabética estrita dos nomes
         lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
-        
         setAlunos(lista);
       } catch (error) {
         console.error("Erro ao carregar relatório de alunos:", error);
@@ -49,10 +47,14 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
 
   return (
     <div className="p-6 max-w-6xl mx-auto bg-white rounded-xl shadow-sm space-y-6">
-      {/* Estilos globais e de impressão forçada para tabelas longas */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
-          /* Oculta tudo na página exceto o container do relatório */
+          /* Libera a altura e o scroll global travados pelo layout do SPA */
+          html, body {
+            height: auto !important;
+            overflow: visible !important;
+            background: white !important;
+          }
           body * {
             visibility: hidden !important;
           }
@@ -64,22 +66,10 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: white !important;
-          }
-          /* Garante que a tabela quebre páginas corretamente e mostre todas as linhas */
-          table {
-            page-break-inside: auto !important;
           }
           tr {
             page-break-inside: avoid !important;
-            page-break-after: auto !important;
           }
-          thead {
-            display: table-header-group !important;
-          }
-          /* Esconde botões de ação na hora da impressão */
           .print\\:hidden {
             display: none !important;
           }
@@ -87,7 +77,6 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
       `}} />
 
       <div id="relatorio-alunos-wrapper" className="space-y-6">
-        {/* Cabeçalho com ações de impressão e voltar */}
         <div className="flex justify-between items-center border-b pb-4 print:hidden">
           <div className="flex items-center gap-3">
             {onVoltarParaDashboard && (
@@ -112,7 +101,6 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
           </button>
         </div>
 
-        {/* Conteúdo da listagem */}
         {carregando ? (
           <div className="text-center py-10 text-slate-500">Carregando dados dos alunos...</div>
         ) : (
