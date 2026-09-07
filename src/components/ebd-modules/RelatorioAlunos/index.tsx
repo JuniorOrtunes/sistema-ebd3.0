@@ -124,8 +124,9 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
                 </tr>
               ) : (
                 alunos.map((aluno, index) => {
-                  const statusAtual = aluno.status || 'Ativo';
-                  const isAtivo = statusAtual === 'Ativo';
+                  const statusAtual = aluno.status || aluno.situacao || (aluno.ativo === false ? 'Inativo' : 'Ativo');
+                  const isAtivo = statusAtual === 'Ativo' || statusAtual === true;
+                  const textoStatus = isAtivo ? 'Ativo' : 'Inativo';
 
                   return (
                     <tr key={aluno.id} className="hover:bg-slate-50/80">
@@ -139,7 +140,7 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
                             ? 'bg-emerald-100 text-emerald-800' 
                             : 'bg-rose-100 text-rose-800'
                         }`}>
-                          {statusAtual}
+                          {textoStatus}
                         </span>
                       </td>
                     </tr>
