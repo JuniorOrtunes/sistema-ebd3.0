@@ -44,11 +44,34 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
   }, []);
 
   const handleImprimir = () => {
+    const styleEl = document.createElement('style');
+    styleEl.innerHTML = `
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+        #relatorio-alunos-print-container, #relatorio-alunos-print-container * {
+          visibility: visible;
+        }
+        #relatorio-alunos-print-container {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100% !important;
+          background: white !important;
+        }
+        .print\\:hidden {
+          display: none !important;
+        }
+      }
+    `;
+    document.head.appendChild(styleEl);
     window.print();
+    document.head.removeChild(styleEl);
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto bg-white rounded-xl shadow-sm space-y-6 print:shadow-none print:p-0 print:max-w-none print:w-full print:m-0">
+    <div id="relatorio-alunos-print-container" className="p-6 max-w-6xl mx-auto bg-white rounded-xl shadow-sm space-y-6">
       {/* Estilo injetado para garantir quebra de páginas limpa na impressão de múltiplos registros */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
