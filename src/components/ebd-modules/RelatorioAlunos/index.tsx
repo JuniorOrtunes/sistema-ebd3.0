@@ -44,114 +44,118 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
   }, []);
 
   const handleImprimir = () => {
-    const styleEl = document.createElement('style');
-    styleEl.innerHTML = `
-      @media print {
-        body * {
-          visibility: hidden;
-        }
-        #relatorio-alunos-print-container, #relatorio-alunos-print-container * {
-          visibility: visible;
-        }
-        #relatorio-alunos-print-container {
-          position: absolute;
-          left: 0;
-          top: 0;
-          width: 100% !important;
-          background: white !important;
-        }
-        .print\\:hidden {
-          display: none !important;
-        }
-      }
-    `;
-    document.head.appendChild(styleEl);
     window.print();
-    document.head.removeChild(styleEl);
   };
 
   return (
-    <div id="relatorio-alunos-print-container" className="p-6 max-w-6xl mx-auto bg-white rounded-xl shadow-sm space-y-6">
-      {/* Estilo injetado para garantir quebra de páginas limpa na impressão de múltiplos registros */}
+    <div className="p-6 max-w-6xl mx-auto bg-white rounded-xl shadow-sm space-y-6">
+      {/* Estilos globais e de impressão forçada para tabelas longas */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
-          body {
-            background-color: white !important;
+          /* Oculta tudo na página exceto o container do relatório */
+          body * {
+            visibility: hidden !important;
+          }
+          #relatorio-alunos-wrapper, #relatorio-alunos-wrapper * {
+            visibility: visible !important;
+          }
+          #relatorio-alunos-wrapper {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+          }
+          /* Garante que a tabela quebre páginas corretamente e mostre todas as linhas */
+          table {
+            page-break-inside: auto !important;
           }
           tr {
-            page-break-inside: avoid;
+            page-break-inside: avoid !important;
+            page-break-after: auto !important;
+          }
+          thead {
+            display: table-header-group !important;
+          }
+          /* Esconde botões de ação na hora da impressão */
+          .print\\:hidden {
+            display: none !important;
           }
         }
       `}} />
 
-      {/* Cabeçalho com ações de impressão e voltar (oculto na hora de imprimir) */}
-      <div className="flex justify-between items-center border-b pb-4 print:hidden">
-        <div className="flex items-center gap-3">
-          {onVoltarParaDashboard && (
-            <button
-              onClick={onVoltarParaDashboard}
-              className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
-              title="Voltar ao Dashboard"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-          )}
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">Relatório Geral de Alunos</h1>
-            <p className="text-sm text-slate-500">Escola Bíblica Dominical - Segunda Igreja Batista de Osasco</p>
+      <div id="relatorio-alunos-wrapper" className="space-y-6">
+        {/* Cabeçalho com ações de impressão e voltar */}
+        <div className="flex justify-between items-center border-b pb-4 print:hidden">
+          <div className="flex items-center gap-3">
+            {onVoltarParaDashboard && (
+              <button
+                onClick={onVoltarParaDashboard}
+                className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
+                title="Voltar ao Dashboard"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            )}
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">Relatório Geral de Alunos</h1>
+              <p className="text-sm text-slate-500">Escola Bíblica Dominical - Segunda Igreja Batista de Osasco</p>
+            </div>
           </div>
+          <button
+            onClick={handleImprimir}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm flex items-center gap-2"
+          >
+            🖨️ Imprimir / Salvar PDF
+          </button>
         </div>
-        <button
-          onClick={handleImprimir}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm flex items-center gap-2"
-        >
-          🖨️ Imprimir / Salvar PDF
-        </button>
-      </div>
 
-      {/* Conteúdo da listagem */}
-      {carregando ? (
-        <div className="text-center py-10 text-slate-500">Carregando dados dos alunos...</div>
-      ) : (
-        <div className="overflow-x-auto print:overflow-visible">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-600 text-xs uppercase tracking-wider bg-slate-50">
-                <th className="py-3 px-4">#</th>
-                <th className="py-3 px-4">Nome do Aluno</th>
-                <th className="py-3 px-4">Classe</th>
-                <th className="py-3 px-4">Telefone</th>
-                <th className="py-3 px-4 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
-              {alunos.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="text-center py-6 text-slate-400">Nenhum aluno encontrado.</td>
+        {/* Conteúdo da listagem */}
+        {carregando ? (
+          <div className="text-center py-10 text-slate-500">Carregando dados dos alunos...</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-600 text-xs uppercase tracking-wider bg-slate-50">
+                  <th className="py-3 px-4">#</th>
+                  <th className="py-3 px-4">Nome do Aluno</th>
+                  <th className="py-3 px-4">Classe</th>
+                  <th className="py-3 px-4">Telefone</th>
+                  <th className="py-3 px-4 text-center">Status</th>
                 </tr>
-              ) : (
-                alunos.map((aluno, index) => (
-                  <tr key={aluno.id} className="hover:bg-slate-50/80">
-                    <td className="py-3 px-4 text-slate-400 w-12">{index + 1}</td>
-                    <td className="py-3 px-4 font-medium text-slate-900">{aluno.nome}</td>
-                    <td className="py-3 px-4">{aluno.classe || 'Não informada'}</td>
-                    <td className="py-3 px-4">{aluno.telefone || aluno.celular || 'Não informado'}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`inline-block px-2.5 py-1 text-xs font-semibold rounded-full ${
-                        (aluno.status || 'Ativo') === 'Ativo' 
-                          ? 'bg-emerald-100 text-emerald-800' 
-                          : 'bg-rose-100 text-rose-800'
-                      }`}>
-                        {aluno.status || 'Ativo'}
-                      </span>
-                    </td>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
+                {alunos.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="text-center py-6 text-slate-400">Nenhum aluno encontrado.</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+                ) : (
+                  alunos.map((aluno, index) => (
+                    <tr key={aluno.id} className="hover:bg-slate-50/80">
+                      <td className="py-3 px-4 text-slate-400 w-12">{index + 1}</td>
+                      <td className="py-3 px-4 font-medium text-slate-900">{aluno.nome}</td>
+                      <td className="py-3 px-4">{aluno.classe || 'Não informada'}</td>
+                      <td className="py-3 px-4">{aluno.telefone || aluno.celular || 'Não informado'}</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`inline-block px-2.5 py-1 text-xs font-semibold rounded-full ${
+                          (aluno.status || 'Ativo') === 'Ativo' 
+                            ? 'bg-emerald-100 text-emerald-800' 
+                            : 'bg-rose-100 text-rose-800'
+                        }`}>
+                          {aluno.status || 'Ativo'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
