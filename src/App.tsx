@@ -105,7 +105,7 @@ export default function App() {
         onLogout={() => setPerfilLogado('nenhum')}
       />
 
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 print:overflow-visible print:h-auto print:p-0">
         {abaAtiva === 'dashboard' && <Dashboard />}
         {abaAtiva === 'alunos' && <Alunos />}
         {abaAtiva === 'classes' && <ClassesModule />}

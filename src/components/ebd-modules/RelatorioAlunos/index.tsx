@@ -78,9 +78,9 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
       {carregando ? (
         <div className="text-center py-10 text-slate-500">Carregando dados dos alunos...</div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto print:overflow-visible">
           <table className="w-full text-left border-collapse">
-            <thead>
+              <thead>
               <tr className="border-b border-slate-200 text-slate-600 text-xs uppercase tracking-wider bg-slate-50">
                 <th className="py-3 px-4">#</th>
                 <th className="py-3 px-4">Nome do Aluno</th>
