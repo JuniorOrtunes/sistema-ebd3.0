@@ -26,18 +26,34 @@ export function DashboardCharts({
             Frequência por Classe
           </h3>
         </div>
-        <div className="h-64 w-full flex items-center justify-center">
+        <div className="h-64 w-full flex items-center justify-center pt-2">
           {frequenciaClasseData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={frequenciaClasseData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <LineChart data={frequenciaClasseData} margin={{ top: 15, right: 10, left: 10, bottom: 25 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="classe" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                <XAxis 
+                  dataKey="classe" 
+                  stroke="#94a3b8" 
+                  fontSize={9} 
+                  tickLine={false} 
+                  interval={0} 
+                  angle={-45}
+                  textAnchor="end"
+                  height={75}
+                />
+                <YAxis 
+                  stroke="#94a3b8" 
+                  fontSize={12} 
+                  domain={[0, 100]} 
+                  tickLine={false} 
+                  axisLine={false} 
+                  tickFormatter={(value) => `${value}%`}
+                />
                 <Tooltip content={<CustomTooltip />} />
                 <Line 
                   type="monotone" 
                   dataKey="frequencia" 
-                  name="Total Presenças" 
+                  name="Frequência (%)" 
                   stroke="#2563eb" 
                   strokeWidth={3} 
                   dot={{ r: 5, fill: '#2563eb', strokeWidth: 2, stroke: '#ffffff' }}
