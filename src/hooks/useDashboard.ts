@@ -126,15 +126,26 @@ export function useDashboard() {
 
       atualizarMetricasDashboard(listaChamadasGlobal);
 
-      // Correção SE30-34: Incluindo data formatada no rótulo da aula para evitar mistura e ambiguidade
-      let chartData = listaChamadasGlobal.map((cls: any) => {
+      // Obtém o ano e mês atuais no formato "AAAA-MM" (ex: "2026-09")
+      const agora = new Date();
+      const anoAtual = agora.getFullYear();
+      const mesAtual = String(agora.getMonth() + 1).padStart(2, '0');
+      const periodoVigente = `${anoAtual}-${mesAtual}`;
+
+      // Filtra as chamadas apenas para o mês vigente
+      const chamadasMesVigente = listaChamadasGlobal.filter((cls: any) => {
+        const dataRaw = cls.data || ''; // Ex: "2026-09-06"
+        return dataRaw.startsWith(periodoVigente);
+      });
+
+      let chartData = chamadasMesVigente.map((cls: any) => {
         const presentes = cls.totalPresentesAlunos || 0;
         const matriculados = cls.totalMatriculados || 0;
         const visitantes = cls.totalVisitantes || 0;
         const taxa = matriculados > 0 ? Math.round((presentes / matriculados) * 100) : 0;
 
         const nomeClasse = cls.classe || cls.turma || 'Classe';
-        const dataRaw = cls.data || ''; // Ex: "2026-09-06"
+        const dataRaw = cls.data || '';
         
         let dataFormatada = dataRaw;
         if (dataRaw && dataRaw.includes('-')) {
@@ -161,8 +172,8 @@ export function useDashboard() {
       });
 
       setPresencaAulaData(chartData);
-
-      const freqClasseMap = listaChamadasGlobal.reduce((acc: any, curr: any) => {
+      
+    const freqClasseMap = listaChamadasGlobal.reduce((acc: any, curr: any) => {
         const nomeClasse = curr.classe || curr.turma || 'Classe Geral';
         const totalAlunosPresentes = (curr.totalPresentesAlunos || 0) + (curr.totalVisitantes || 0);
         acc[nomeClasse] = (acc[nomeClasse] || 0) + totalAlunosPresentes;
