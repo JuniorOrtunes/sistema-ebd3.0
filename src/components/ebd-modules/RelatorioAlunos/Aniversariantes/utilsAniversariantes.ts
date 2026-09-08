@@ -1,41 +1,67 @@
-// Interface para o Aniversariante
 export interface Aniversariante {
   id: string;
   nome: string;
   classe: string;
-  dataNascimento?: string; // Suporta 'DD/MM/YYYY', 'DD/MM' ou 'YYYY-MM-DD'
+  dataNascimento?: string; // Formato 'DD/MM/YYYY' ou 'DD/MM'
   dataCasamento?: string;
 }
 
-// Função auxiliar ultra-segura para extrair dia e mês de qualquer formato de data comum (DD/MM ou YYYY-MM-DD)
 export const extrairDiaMes = (dataStr?: string) => {
-  if (!dataStr || typeof dataStr !== 'string') return { dia: 0, mes: 0 };
+  if (!dataStr || typeof dataStr !== 'string') return { dia: 0, mes: 0, ano: null };
   
   let dia = 0;
   let mes = 0;
+  let ano: number | null = null;
 
-  // Se estiver no formato ISO / YYYY-MM-DD
   if (dataStr.includes('-') && dataStr.split('-').length >= 3) {
     const partes = dataStr.split('-');
+    ano = parseInt(partes[0], 10);
     mes = parseInt(partes[1], 10);
     dia = parseInt(partes[2], 10);
-  } 
-  // Se estiver no formato brasileiro DD/MM/YYYY ou DD/MM
-  else if (dataStr.includes('/')) {
+  } else if (dataStr.includes('/')) {
     const partes = dataStr.split('/');
     if (partes.length >= 2) {
       dia = parseInt(partes[0], 10);
       mes = parseInt(partes[1], 10);
     }
+    if (partes.length >= 3) {
+      ano = parseInt(partes[2], 10);
+    }
   }
 
   return { 
     dia: isNaN(dia) ? 0 : dia, 
-    mes: isNaN(mes) ? 0 : mes 
+    mes: isNaN(mes) ? 0 : mes,
+    ano: isNaN(ano as number) ? null : ano
   };
 };
 
-// Função de ordenação e filtragem reutilizável
+// Formata para exibição estrito 'dd/mm' (removendo o ano se houver)
+export const formatarDataAniversario = (dataStr?: string): string => {
+  const { dia, mes } = extrairDiaMes(dataStr);
+  if (!dia || !mes) return dataStr || '-';
+  const dStr = String(dia).padStart(2, '0');
+  const mStr = String(mes).padStart(2, '0');
+  return `${dStr}/${mStr}`;
+};
+
+// Calcula a idade com base na data de nascimento completa
+export const calcularIdade = (dataStr?: string): string | number => {
+  const { dia, mes, ano } = extrairDiaMes(dataStr);
+  if (!ano || !dia || !mes) return '-';
+
+  const hoje = new Date();
+  let idade = hoje.getFullYear() - ano;
+  const mesAtual = hoje.getMonth() + 1;
+  const diaAtual = hoje.getDate();
+
+  if (mesAtual < mes || (mesAtual === mes && diaAtual < dia)) {
+    idade--;
+  }
+
+  return idade >= 0 ? idade : '-';
+};
+
 export const filtrarESortAniversariantes = (
   dados: Aniversariante[],
   tipoRelatorio: 'nascimento' | 'casamento',
@@ -44,19 +70,15 @@ export const filtrarESortAniversariantes = (
   verAnoInteiro: boolean
 ) => {
   return dados.filter((item) => {
-    // Filtro por Classe
     if (classeSelecionada !== 'todas' && item.classe?.trim() !== classeSelecionada.trim()) {
       return false;
     }
 
     const dataAlvo = tipoRelatorio === 'nascimento' ? item.dataNascimento : item.dataCasamento;
-    
-    // Se o registro não possui data preenchida para este tipo de relatório, oculta
     if (!dataAlvo) return false;
 
     const { mes } = extrairDiaMes(dataAlvo);
 
-    // Filtro por Mês (se não for ano inteiro)
     if (!verAnoInteiro) {
       const mesNum = parseInt(mesSelecionado, 10);
       if (mes !== mesNum) return false;
@@ -71,23 +93,35 @@ export const filtrarESortAniversariantes = (
     const dmB = extrairDiaMes(dataB);
 
     if (verAnoInteiro) {
-      // Critério 1: Mês | Critério 2: Dia
       if (dmA.mes !== dmB.mes) {
         return dmA.mes - dmB.mes;
       }
       return dmA.dia - dmB.dia;
     } else {
-      // Critério único por Mês específico: Ordena apenas pelo Dia
       return dmA.dia - dmB.dia;
     }
   });
 };
 
-// Extrair classes ordenadas alfabeticamente/numericamente (removendo vazias)
 export const obterClassesOrdenadas = (lista: Aniversariante[]): string[] => {
   const classesUnicas = Array.from(
     new Set(lista.map((item) => item.classe?.trim()).filter(Boolean))
   ) as string[];
 
   return classesUnicas.sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+};
+
+export const NOMES_MESES: Record<number, string> = {
+  1: 'JANEIRO',
+  2: 'FEVEREIRO',
+  3: 'MARÇO',
+  4: 'ABRIL',
+  5: 'MAIO',
+  6: 'JUNHO',
+  7: 'JULHO',
+  8: 'AGOSTO',
+  9: 'SETEMBRO',
+  10: 'OUTUBRO',
+  11: 'NOVEMBRO',
+  12: 'DEZEMBRO'
 };
