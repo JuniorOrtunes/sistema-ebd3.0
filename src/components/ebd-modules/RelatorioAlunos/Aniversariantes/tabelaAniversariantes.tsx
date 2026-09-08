@@ -1,11 +1,5 @@
 // Interface unificada para evitar erros de importação de módulos
-export interface Aniversariante {
-  id: string;
-  nome: string;
-  classe: string;
-  dataNascimento?: string;
-  dataCasamento?: string;
-}
+import type { Aniversariante } from './utilsAniversariantes';
 
 interface TabelaAniversariantesProps {
   dados: Aniversariante[];
