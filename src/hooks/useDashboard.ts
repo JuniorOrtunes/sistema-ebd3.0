@@ -174,7 +174,7 @@ export function useDashboard() {
 
       setPresencaAulaData(chartData);
 
-      // 5. Gráfico "Frequência por Classe" (Mês vigente, excluindo "Geral", com cálculo percentual)
+    // 5. Gráfico "Frequência por Classe" (Mês vigente, excluindo "Geral", com cálculo percentual)
       let classesValidasParaFreq = todasClassesAtivas.filter(nome => {
         const lower = String(nome).toLowerCase();
         return !lower.includes('geral');
