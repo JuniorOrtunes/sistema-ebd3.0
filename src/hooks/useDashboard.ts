@@ -56,47 +56,18 @@ export function useDashboard() {
 
   useEffect(() => {
     let listaChamadasGlobal: any[] = [];
+    let listaAlunosGlobal: any[] = [];
+    let listaClassesGlobal: any[] = [];
 
-    const atualizarMetricasDashboard = async (listaChamadas: any[]) => {
-      if (listaChamadas.length > 0) {
-        const datasUnicas = Array.from(new Set(listaChamadas.map((c: any) => c.data))).filter(Boolean) as string[];
-        datasUnicas.sort().reverse();
-        const ultimaData = datasUnicas[0];
-
-        // Chamadas da última aula para somar presentes e visitantes locais
-        const chamadasUltimaAula = listaChamadas.filter((cls: any) => cls.data === ultimaData);
-        let sumPresentesUltima = 0;
-        let sumVisitantesUltima = 0;
-
-        chamadasUltimaAula.forEach((cls: any) => {
-          sumPresentesUltima += cls.totalPresentesAlunos || 0;
-          sumVisitantesUltima += cls.totalVisitantes || 0;
-        });
-
-        setTotalPresentes(sumPresentesUltima);
-        setTotalVisitantes(sumVisitantesUltima);
-
-        // Utilizando o serviço unificado para obter o percentual exato com o denominador global (222)
-        const resultadoFrequencia = await calcularFrequenciaGeral(ultimaData);
-        setPercentualPresenca(resultadoFrequencia.percentualFrequencia);
-      } else {
-        setTotalPresentes(0);
-        setTotalVisitantes(0);
-        setPercentualPresenca(0);
-      }
-    };
-
-    const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
-      const listaAlunos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
-      
-      // Filtrando pelo campo correto 'situacao' (mesmo padrão do AlunosTable e Chamada)
-      const alunosAtivos = listaAlunos.filter(aluno => {
+    const recalcularTudo = async () => {
+      // 1. Alunos e Distribuição por Classe
+      const alunosAtivos = listaAlunosGlobal.filter(aluno => {
         const situacaoStr = String(aluno.situacao || aluno.status || '').trim().toLowerCase();
         return situacaoStr !== 'inativo';
       });
       setTotalAlunos(alunosAtivos.length);
 
-      const profsNosAlunos = listaAlunos.filter(a => a.eProfessor).length;
+      const profsNosAlunos = listaAlunosGlobal.filter(a => a.eProfessor).length;
       setTotalProfessores(profsNosAlunos);
 
       const contagemClasses: Record<string, number> = {};
@@ -110,31 +81,61 @@ export function useDashboard() {
         value: contagemClasses[nome],
         color: getTurmaColor(nome, index)
       }));
-
       barData.sort((a, b) => ordenarTurmas(a, b, 'name'));
       setDistribuicaoData(barData);
-    });
 
-    const unsubClasses = onSnapshot(collection(db, 'classes'), (snapshot) => {
-      const listaClasses = snapshot.docs.map(doc => doc.data());
-      const classesAtivasCount = listaClasses.filter(c => c.ativa !== false).length;
+      // 2. Classes Ativas Count
+      const classesAtivasCount = listaClassesGlobal.filter(c => c.ativa !== false).length;
       setTotalClasses(classesAtivasCount);
-    });
 
-    const unsubChamadas = onSnapshot(collection(db, 'chamadas'), (snapshot) => {
-      listaChamadasGlobal = snapshot.docs.map(doc => doc.data());
+      // Consolidar conjunto de todas as classes ativas para gráficos
+      const classesAtivasSet = new Set<string>();
+      listaClassesGlobal.forEach((c: any) => {
+        if (c.ativa !== false && (c.nome || c.turma || c.name)) {
+          classesAtivasSet.add(c.nome || c.turma || c.name);
+        }
+      });
+      alunosAtivos.forEach((aluno: any) => {
+        const nomeClasse = aluno.classe || aluno.turma;
+        if (nomeClasse) classesAtivasSet.add(nomeClasse);
+      });
+      const todasClassesAtivas = Array.from(classesAtivasSet);
+      todasClassesAtivas.sort((a, b) => ordenarTurmas({ classe: a }, { classe: b }, 'classe'));
 
-      atualizarMetricasDashboard(listaChamadasGlobal);
+      // 3. Métricas globais da última aula
+      if (listaChamadasGlobal.length > 0) {
+        const datasUnicas = Array.from(new Set(listaChamadasGlobal.map((c: any) => c.data))).filter(Boolean) as string[];
+        datasUnicas.sort().reverse();
+        const ultimaData = datasUnicas[0];
 
-      // Obtém o ano e mês atuais no formato "AAAA-MM" (ex: "2026-09")
+        const chamadasUltimaAula = listaChamadasGlobal.filter((cls: any) => cls.data === ultimaData);
+        let sumPresentesUltima = 0;
+        let sumVisitantesUltima = 0;
+
+        chamadasUltimaAula.forEach((cls: any) => {
+          sumPresentesUltima += cls.totalPresentesAlunos || 0;
+          sumVisitantesUltima += cls.totalVisitantes || 0;
+        });
+
+        setTotalPresentes(sumPresentesUltima);
+        setTotalVisitantes(sumVisitantesUltima);
+
+        const resultadoFrequencia = await calcularFrequenciaGeral(ultimaData);
+        setPercentualPresenca(resultadoFrequencia.percentualFrequencia);
+      } else {
+        setTotalPresentes(0);
+        setTotalVisitantes(0);
+        setPercentualPresenca(0);
+      }
+
+      // 4. Gráfico "% Presença por Aula" (Mês Vigente)
       const agora = new Date();
       const anoAtual = agora.getFullYear();
       const mesAtual = String(agora.getMonth() + 1).padStart(2, '0');
       const periodoVigente = `${anoAtual}-${mesAtual}`;
 
-      // Filtra as chamadas apenas para o mês vigente
       const chamadasMesVigente = listaChamadasGlobal.filter((cls: any) => {
-        const dataRaw = cls.data || ''; // Ex: "2026-09-06"
+        const dataRaw = cls.data || '';
         return dataRaw.startsWith(periodoVigente);
       });
 
@@ -172,21 +173,37 @@ export function useDashboard() {
       });
 
       setPresencaAulaData(chartData);
-      
-    const freqClasseMap = listaChamadasGlobal.reduce((acc: any, curr: any) => {
-        const nomeClasse = curr.classe || curr.turma || 'Classe Geral';
-        const totalAlunosPresentes = (curr.totalPresentesAlunos || 0) + (curr.totalVisitantes || 0);
-        acc[nomeClasse] = (acc[nomeClasse] || 0) + totalAlunosPresentes;
-        return acc;
-      }, {});
 
-      let freqClasseArray = Object.keys(freqClasseMap).map(classe => ({
-        classe: classe,
-        frequencia: freqClasseMap[classe]
-      }));
-      freqClasseArray.sort((a, b) => ordenarTurmas(a, b, 'classe'));
+    // 5. Gráfico "Frequência por Classe" (Mês vigente, excluindo "Geral", com cálculo percentual)
+      let classesValidasParaFreq = todasClassesAtivas.filter(nome => {
+        const lower = String(nome).toLowerCase();
+        return !lower.includes('geral');
+      });
+
+      let freqClasseArray = classesValidasParaFreq.map(nomeClasse => {
+        const chamadasDaClasse = listaChamadasGlobal.filter((c: any) => {
+          const clsNome = c.classe || c.turma || '';
+          const dataRaw = c.data || '';
+          return clsNome === nomeClasse && dataRaw.startsWith(periodoVigente);
+        });
+
+        let totalPres = 0;
+        let totalMat = 0;
+        chamadasDaClasse.forEach((c: any) => {
+          totalPres += c.totalPresentesAlunos || 0;
+          totalMat += c.totalMatriculados || 0;
+        });
+
+        const percentualFreq = totalMat > 0 ? Math.round((totalPres / totalMat) * 100) : 0;
+        return {
+          classe: nomeClasse,
+          frequencia: percentualFreq
+        };
+      });
+
       setFrequenciaClasseData(freqClasseArray);
 
+      // 6. Evolução Semanas
       const evolucaoMap = listaChamadasGlobal.reduce((acc: any, curr: any) => {
         const data = curr.data || 'Data';
         acc[data] = (acc[data] || 0) + (curr.totalPresentesAlunos || 0) + (curr.totalVisitantes || 0);
@@ -200,6 +217,21 @@ export function useDashboard() {
       }));
       evolucaoArray.sort((a, b) => a.rawDate.localeCompare(b.rawDate));
       setEvolucaoSemanasData(evolucaoArray);
+    };
+
+    const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
+      listaAlunosGlobal = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+      recalcularTudo();
+    });
+
+    const unsubClasses = onSnapshot(collection(db, 'classes'), (snapshot) => {
+      listaClassesGlobal = snapshot.docs.map(doc => doc.data());
+      recalcularTudo();
+    });
+
+    const unsubChamadas = onSnapshot(collection(db, 'chamadas'), (snapshot) => {
+      listaChamadasGlobal = snapshot.docs.map(doc => doc.data());
+      recalcularTudo();
     });
 
     return () => {
