@@ -3,18 +3,36 @@ export interface Aniversariante {
   id: string;
   nome: string;
   classe: string;
-  dataNascimento?: string; // Formato 'DD/MM/YYYY' ou 'DD/MM'
+  dataNascimento?: string; // Suporta 'DD/MM/YYYY', 'DD/MM' ou 'YYYY-MM-DD'
   dataCasamento?: string;
 }
 
-// Função auxiliar segura para extrair dia e mês da string de data
+// Função auxiliar ultra-segura para extrair dia e mês de qualquer formato de data comum (DD/MM ou YYYY-MM-DD)
 export const extrairDiaMes = (dataStr?: string) => {
   if (!dataStr || typeof dataStr !== 'string') return { dia: 0, mes: 0 };
-  const partes = dataStr.split('/');
-  if (partes.length < 2) return { dia: 0, mes: 0 };
-  const dia = parseInt(partes[0], 10);
-  const mes = parseInt(partes[1], 10);
-  return { dia: isNaN(dia) ? 0 : dia, mes: isNaN(mes) ? 0 : mes };
+  
+  let dia = 0;
+  let mes = 0;
+
+  // Se estiver no formato ISO / YYYY-MM-DD
+  if (dataStr.includes('-') && dataStr.split('-').length >= 3) {
+    const partes = dataStr.split('-');
+    mes = parseInt(partes[1], 10);
+    dia = parseInt(partes[2], 10);
+  } 
+  // Se estiver no formato brasileiro DD/MM/YYYY ou DD/MM
+  else if (dataStr.includes('/')) {
+    const partes = dataStr.split('/');
+    if (partes.length >= 2) {
+      dia = parseInt(partes[0], 10);
+      mes = parseInt(partes[1], 10);
+    }
+  }
+
+  return { 
+    dia: isNaN(dia) ? 0 : dia, 
+    mes: isNaN(mes) ? 0 : mes 
+  };
 };
 
 // Função de ordenação e filtragem reutilizável
@@ -27,11 +45,15 @@ export const filtrarESortAniversariantes = (
 ) => {
   return dados.filter((item) => {
     // Filtro por Classe
-    if (classeSelecionada !== 'todas' && item.classe !== classeSelecionada) {
+    if (classeSelecionada !== 'todas' && item.classe?.trim() !== classeSelecionada.trim()) {
       return false;
     }
 
     const dataAlvo = tipoRelatorio === 'nascimento' ? item.dataNascimento : item.dataCasamento;
+    
+    // Se o registro não possui data preenchida para este tipo de relatório, oculta
+    if (!dataAlvo) return false;
+
     const { mes } = extrairDiaMes(dataAlvo);
 
     // Filtro por Mês (se não for ano inteiro)
