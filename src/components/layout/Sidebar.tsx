@@ -195,7 +195,7 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
                   }`}
                 >
                   <Calendar className="w-4 h-4" />
-                  <span>Aniversariantes <span className="text-[9px] bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded ml-auto">Em breve</span></span>
+                  <span>Aniversariantes</span>
                 </button>
 
                 <button
@@ -241,7 +241,7 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
 
           <div className="flex flex-col items-center justify-center space-y-0.5">
             <p className="text-[10px] text-blue-400/60 font-medium text-center">© 2026 SIBO</p>
-            <p className="text-[9px] text-blue-400/40 font-mono tracking-wider">v1.2.0</p>
+            <p className="text-[9px] text-blue-400/40 font-mono tracking-wider">v1.2.5</p>
           </div>
         </div>
       </aside>
