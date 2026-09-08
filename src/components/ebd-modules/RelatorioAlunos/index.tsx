@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../../../firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { ArrowLeft } from 'lucide-react';
 
 interface Aluno {
@@ -24,9 +24,9 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
   const [imprimindo, setImprimindo] = useState(false);
 
   useEffect(() => {
-    async function buscarAlunos() {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'alunos'));
+    const unsubscribe = onSnapshot(
+      collection(db, 'alunos'),
+      (querySnapshot) => {
         const lista: Aluno[] = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -34,18 +34,19 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
 
         lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
         setAlunos(lista);
-      } catch (error) {
-        console.error("Erro ao carregar relatório de alunos:", error);
-      } finally {
+        setCarregando(false);
+      },
+      (error) => {
+        console.error("Erro ao carregar relatório de alunos em tempo real:", error);
         setCarregando(false);
       }
-    }
-    buscarAlunos();
+    );
+
+    return () => unsubscribe();
   }, []);
 
   const handleImprimir = () => {
     setImprimindo(true);
-    // Aguarda o Portal renderizar no DOM fora da árvore da SPA antes de disparar o print
     setTimeout(() => {
       window.print();
       setImprimindo(false);
@@ -54,7 +55,6 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
 
   return (
     <div className="p-6 max-w-6xl mx-auto bg-white rounded-xl shadow-sm space-y-6">
-      {/* Estilos globais exclusivos para a impressão */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           body > *:not(.print-portal-container) {
@@ -78,7 +78,6 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
         }
       `}} />
 
-      {/* Cabeçalho e visualização normal da tela */}
       <div className="flex justify-between items-center border-b pb-4">
         <div className="flex items-center gap-3">
           {onVoltarParaDashboard && (
@@ -152,7 +151,6 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
         </div>
       )}
 
-      {/* React Portal: Renderiza a tabela de impressão diretamente no body */}
       {imprimindo && createPortal(
         <div className="print-portal-container p-8 bg-white">
           <div className="mb-6 border-b pb-4">
@@ -171,7 +169,10 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
             </thead>
             <tbody>
               {alunos.map((aluno, index) => {
-                const statusAtual = aluno.status || 'Ativo';
+                const statusAtual = aluno.status || aluno.situacao || (aluno.ativo === false ? 'Inativo' : 'Ativo');
+                const isAtivo = statusAtual === 'Ativo' || statusAtual === true;
+                const textoStatus = isAtivo ? 'Ativo' : 'Inativo';
+
                 return (
                   <tr key={aluno.id} className="border-b border-slate-200">
                     <td className="py-2 px-3 border border-slate-200 text-slate-500 w-12">{index + 1}</td>
@@ -179,7 +180,7 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
                     <td className="py-2 px-3 border border-slate-200">{aluno.classe || 'Não informada'}</td>
                     <td className="py-2 px-3 border border-slate-200">{aluno.telefone || aluno.celular || 'Não informado'}</td>
                     <td className="py-2 px-3 border border-slate-200 text-center font-semibold text-xs">
-                      {statusAtual}
+                      {textoStatus}
                     </td>
                   </tr>
                 );
