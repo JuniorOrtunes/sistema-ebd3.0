@@ -1,4 +1,3 @@
-// Interface unificada para evitar erros de importação de módulos
 import type { Aniversariante } from './utilsAniversariantes';
 
 interface TabelaAniversariantesProps {
@@ -7,38 +6,41 @@ interface TabelaAniversariantesProps {
 }
 
 export function TabelaAniversariantes({ dados, tipoRelatorio }: TabelaAniversariantesProps) {
-  const rotuloData = tipoRelatorio === 'nascimento' ? 'Data de Nascimento' : 'Data de Casamento';
-
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="p-4 border-b border-slate-100 font-semibold text-slate-700 flex justify-between items-center">
-        <span>Resultados da Listagem</span>
-        <span className="text-xs font-normal text-slate-500">Total: {dados.length} registros</span>
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
+        <h3 className="font-semibold text-slate-800 text-sm">Resultados da Listagem</h3>
+        <span className="text-xs font-medium text-slate-500 bg-slate-200/60 px-2.5 py-1 rounded-full">
+          Total: {dados.length} {dados.length === 1 ? 'registro' : 'registros'}
+        </span>
       </div>
-      
+
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase">
-              <th className="p-3">Nome</th>
-              <th className="p-3">Classe</th>
-              <th className="p-3">{rotuloData}</th>
+            <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 text-xs font-semibold uppercase tracking-wider">
+              <th className="py-3 px-6">Nome</th>
+              <th className="py-3 px-6">Classe</th>
+              <th className="py-3 px-6">
+                {tipoRelatorio === 'nascimento' ? 'Data de Nascimento' : 'Data de Casamento'}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
             {dados.length > 0 ? (
-              dados.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="p-3 font-medium">{item.nome}</td>
-                  <td className="p-3 text-slate-500">{item.classe}</td>
-                  <td className="p-3">
-                    {tipoRelatorio === 'nascimento' ? item.dataNascimento || '-' : item.dataCasamento || '-'}
-                  </td>
-                </tr>
-              ))
+              dados.map((item) => {
+                const dataRaw = tipoRelatorio === 'nascimento' ? item.dataNascimento : item.dataCasamento;
+                return (
+                  <tr key={item.id} className="hover:bg-slate-50 transition-colors even:bg-slate-50/40">
+                    <td className="py-3.5 px-6 font-medium text-slate-900">{item.nome || 'Nome não informado'}</td>
+                    <td className="py-3.5 px-6 text-slate-600">{item.classe || 'Sem Classe'}</td>
+                    <td className="py-3.5 px-6 text-slate-600">{dataRaw || '-'}</td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
-                <td colSpan={3} className="p-8 text-center text-slate-400">
+                <td colSpan={3} className="py-12 text-center text-slate-400">
                   Nenhum registro encontrado para os filtros selecionados.
                 </td>
               </tr>
