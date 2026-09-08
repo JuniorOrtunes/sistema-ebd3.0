@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { FiltrosAniversariantes } from './filtrosAniversariantes';
 import { TabelaAniversariantes } from './tabelaAniversariantes';
-import { Aniversariante, filtrarESortAniversariantes } from './utilsAniversariantes';
+import type { Aniversariante } from './utilsAniversariantes';
+import { filtrarESortAniversariantes } from './utilsAniversariantes';
 
 // Dados mockados de exemplo (depois você pode substituir pela integração real do sistema)
 const dadosIniciaisMock: Aniversariante[] = [
