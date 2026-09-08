@@ -174,21 +174,33 @@ export function useDashboard() {
 
       setPresencaAulaData(chartData);
 
-      // 5. Gráfico "Frequência por Classe" (Todas as 9 classes ativas com cálculo percentual)
-      let freqClasseArray = todasClassesAtivas.map(nomeClasse => {
-        const chamadasDaClasse = listaChamadasGlobal.filter((c: any) => (c.classe || c.turma) === nomeClasse);
+      // 5. Gráfico "Frequência por Classe" (Mês vigente, excluindo "Geral", com cálculo percentual)
+      let classesValidasParaFreq = todasClassesAtivas.filter(nome => {
+        const lower = String(nome).toLowerCase();
+        return !lower.includes('geral');
+      });
+
+      let freqClasseArray = classesValidasParaFreq.map(nomeClasse => {
+        const chamadasDaClasse = listaChamadasGlobal.filter((c: any) => {
+          const clsNome = c.classe || c.turma || '';
+          const dataRaw = c.data || '';
+          return clsNome === nomeClasse && dataRaw.startsWith(periodoVigente);
+        });
+
         let totalPres = 0;
         let totalMat = 0;
         chamadasDaClasse.forEach((c: any) => {
           totalPres += c.totalPresentesAlunos || 0;
           totalMat += c.totalMatriculados || 0;
         });
+
         const percentualFreq = totalMat > 0 ? Math.round((totalPres / totalMat) * 100) : 0;
         return {
           classe: nomeClasse,
           frequencia: percentualFreq
         };
       });
+
       setFrequenciaClasseData(freqClasseArray);
 
       // 6. Evolução Semanas
