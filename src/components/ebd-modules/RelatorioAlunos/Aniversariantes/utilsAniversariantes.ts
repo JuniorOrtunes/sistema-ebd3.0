@@ -70,6 +70,7 @@ export const filtrarESortAniversariantes = (
   verAnoInteiro: boolean
 ) => {
   return dados.filter((item) => {
+    // Filtro por Classe
     if (classeSelecionada !== 'todas' && item.classe?.trim() !== classeSelecionada.trim()) {
       return false;
     }
@@ -79,6 +80,7 @@ export const filtrarESortAniversariantes = (
 
     const { mes } = extrairDiaMes(dataAlvo);
 
+    // Filtro por Mês (se não for ano inteiro)
     if (!verAnoInteiro) {
       const mesNum = parseInt(mesSelecionado, 10);
       if (mes !== mesNum) return false;
@@ -93,13 +95,25 @@ export const filtrarESortAniversariantes = (
     const dmB = extrairDiaMes(dataB);
 
     if (verAnoInteiro) {
+      // 1º Critério: Mês
       if (dmA.mes !== dmB.mes) {
         return dmA.mes - dmB.mes;
       }
-      return dmA.dia - dmB.dia;
+      // 2º Critério: Dia
+      if (dmA.dia !== dmB.dia) {
+        return dmA.dia - dmB.dia;
+      }
     } else {
-      return dmA.dia - dmB.dia;
+      // Apenas por Dia se for um mês específico
+      if (dmA.dia !== dmB.dia) {
+        return dmA.dia - dmB.dia;
+      }
     }
+
+    // 3º Critério: Nome (ordem alfabética caso o mês e o dia sejam iguais)
+    const nomeA = (a.nome || '').toLowerCase();
+    const nomeB = (b.nome || '').toLowerCase();
+    return nomeA.localeCompare(nomeB, 'pt-BR');
   });
 };
 
