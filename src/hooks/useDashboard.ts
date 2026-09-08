@@ -86,7 +86,7 @@ export function useDashboard() {
       }
     };
 
-  const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
+    const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const listaAlunos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
       
       // Filtrando pelo campo correto 'situacao' (mesmo padrão do AlunosTable e Chamada)
@@ -104,7 +104,6 @@ export function useDashboard() {
         const nomeClasse = aluno.classe || aluno.turma || 'Não definida';
         contagemClasses[nomeClasse] = (contagemClasses[nomeClasse] || 0) + 1;
       });
-      // ... resto do código
 
       let barData = Object.keys(contagemClasses).map((nome, index) => ({
         name: nome,
@@ -127,19 +126,40 @@ export function useDashboard() {
 
       atualizarMetricasDashboard(listaChamadasGlobal);
 
+      // Correção SE30-34: Incluindo data formatada no rótulo da aula para evitar mistura e ambiguidade
       let chartData = listaChamadasGlobal.map((cls: any) => {
         const presentes = cls.totalPresentesAlunos || 0;
         const matriculados = cls.totalMatriculados || 0;
         const visitantes = cls.totalVisitantes || 0;
         const taxa = matriculados > 0 ? Math.round((presentes / matriculados) * 100) : 0;
 
+        const nomeClasse = cls.classe || cls.turma || 'Classe';
+        const dataRaw = cls.data || ''; // Ex: "2026-09-06"
+        
+        let dataFormatada = dataRaw;
+        if (dataRaw && dataRaw.includes('-')) {
+          const partes = dataRaw.split('-');
+          if (partes.length === 3) {
+            dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
+          }
+        }
+
         return {
-          aula: cls.classe || cls.turma || 'Classe',
+          aula: dataFormatada ? `${nomeClasse} - ${dataFormatada}` : nomeClasse,
+          classeOriginal: nomeClasse,
+          dataRaw: dataRaw,
           presenca: taxa,
           total: presentes + visitantes
         };
       });
-      chartData.sort((a, b) => ordenarTurmas(a, b, 'aula'));
+
+      chartData.sort((a, b) => {
+        if (a.dataRaw !== b.dataRaw) {
+          return a.dataRaw.localeCompare(b.dataRaw);
+        }
+        return ordenarTurmas(a, b, 'classeOriginal');
+      });
+
       setPresencaAulaData(chartData);
 
       const freqClasseMap = listaChamadasGlobal.reduce((acc: any, curr: any) => {
