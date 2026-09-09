@@ -59,7 +59,7 @@ export function RelatorioAniversariantes() {
 
   const nomeMesAtual = NOMES_MESES[parseInt(mesSelecionado, 10)] || mesSelecionado;
 
-  return (
+   return (
     <div className="space-y-6">
       {/* Cabeçalho e Botão de Impressão Geral */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -71,10 +71,7 @@ export function RelatorioAniversariantes() {
           onClick={handleImprimir}
           className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg shadow-sm transition-colors self-start sm:self-auto print:hidden"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-          </svg>
-          PDF / Imprimir
+          🖨️ Imprimir / Salvar PDF
         </button>
       </div>
 

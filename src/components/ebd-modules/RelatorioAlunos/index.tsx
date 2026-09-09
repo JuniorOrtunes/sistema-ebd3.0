@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../../../firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
-import { ArrowLeft, Users, Calendar } from 'lucide-react';
-import { RelatorioAniversariantes } from './Aniversariantes/RelatorioAniversariantes';
+import { ArrowLeft, Users } from 'lucide-react';
 
 interface Aluno {
   id: string;
@@ -20,7 +19,6 @@ interface RelatorioAlunosProps {
 }
 
 export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlunosProps) {
-  const [abaAtiva, setAbaAtiva] = useState<'geral' | 'aniversariantes'>('geral');
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [imprimindo, setImprimindo] = useState(false);
@@ -92,107 +90,75 @@ export default function RelatorioAlunos({ onVoltarParaDashboard }: RelatorioAlun
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">Relatórios Escola Bíblica Dominical</h1>
-            <p className="text-sm text-slate-500">Segunda Igreja Batista de Osasco</p>
+          <div className="flex items-center gap-2">
+            <Users className="w-6 h-6 text-blue-600" />
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">Relatório Geral de Alunos</h1>
+              <p className="text-sm text-slate-500">Escola Bíblica Dominical - Segunda Igreja Batista de Osasco</p>
+            </div>
           </div>
         </div>
 
-        {/* Sistema de Abas / Botões de Ação */}
-        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-          <div className="flex bg-slate-100 p-1 rounded-lg">
-            <button
-              onClick={() => setAbaAtiva('geral')}
-              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                abaAtiva === 'geral'
-                  ? 'bg-white text-slate-800 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              Geral de Alunos
-            </button>
-            <button
-              onClick={() => setAbaAtiva('aniversariantes')}
-              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                abaAtiva === 'aniversariantes'
-                  ? 'bg-white text-slate-800 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Calendar className="w-4 h-4" />
-              Aniversariantes
-            </button>
-          </div>
-
-          {abaAtiva === 'geral' && (
-            <button
-              onClick={handleImprimir}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm flex items-center gap-2"
-            >
-              🖨️ Imprimir / Salvar PDF
-            </button>
-          )}
-        </div>
+        {/* Botão de Impressão Padrão */}
+        <button
+          onClick={handleImprimir}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg shadow-sm transition-colors self-start sm:self-auto print:hidden"
+        >
+          🖨️ Imprimir / Salvar PDF
+        </button>
       </div>
 
-      {/* Conteúdo dinâmico baseado na aba selecionada */}
-      {abaAtiva === 'aniversariantes' ? (
-        <RelatorioAniversariantes />
+      {/* Conteúdo da Tabela */}
+      {carregando ? (
+        <div className="text-center py-10 text-slate-500">Carregando dados dos alunos...</div>
       ) : (
-        <>
-          {carregando ? (
-            <div className="text-center py-10 text-slate-500">Carregando dados dos alunos...</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-600 text-xs uppercase tracking-wider bg-slate-50">
-                    <th className="py-3 px-4">#</th>
-                    <th className="py-3 px-4">Nome do Aluno</th>
-                    <th className="py-3 px-4">Classe</th>
-                    <th className="py-3 px-4">Telefone</th>
-                    <th className="py-3 px-4 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
-                  {alunos.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="text-center py-6 text-slate-400">Nenhum aluno encontrado.</td>
-                    </tr>
-                  ) : (
-                    alunos.map((aluno, index) => {
-                      const statusAtual = aluno.status || aluno.situacao || (aluno.ativo === false ? 'Inativo' : 'Ativo');
-                      const isAtivo = statusAtual === 'Ativo' || statusAtual === true;
-                      const textoStatus = isAtivo ? 'Ativo' : 'Inativo';
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-200 text-slate-600 text-xs uppercase tracking-wider bg-slate-50">
+                <th className="py-3 px-4">#</th>
+                <th className="py-3 px-4">Nome do Aluno</th>
+                <th className="py-3 px-4">Classe</th>
+                <th className="py-3 px-4">Telefone</th>
+                <th className="py-3 px-4 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
+              {alunos.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-6 text-slate-400">Nenhum aluno encontrado.</td>
+                </tr>
+              ) : (
+                alunos.map((aluno, index) => {
+                  const statusAtual = aluno.status || aluno.situacao || (aluno.ativo === false ? 'Inativo' : 'Ativo');
+                  const isAtivo = statusAtual === 'Ativo' || statusAtual === true;
+                  const textoStatus = isAtivo ? 'Ativo' : 'Inativo';
 
-                      return (
-                        <tr key={aluno.id} className="hover:bg-slate-50/80">
-                          <td className="py-3 px-4 text-slate-400 w-12">{index + 1}</td>
-                          <td className="py-3 px-4 font-medium text-slate-900">{aluno.nome}</td>
-                          <td className="py-3 px-4">{aluno.classe || 'Não informada'}</td>
-                          <td className="py-3 px-4">{aluno.telefone || aluno.celular || 'Não informado'}</td>
-                          <td className="py-3 px-4 text-center">
-                            <span className={`inline-block px-2.5 py-1 text-xs font-semibold rounded-full ${
-                              isAtivo 
-                                ? 'bg-emerald-100 text-emerald-800' 
-                                : 'bg-rose-100 text-rose-800'
-                            }`}>
-                              {textoStatus}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
+                  return (
+                    <tr key={aluno.id} className="hover:bg-slate-50/80">
+                      <td className="py-3 px-4 text-slate-400 w-12">{index + 1}</td>
+                      <td className="py-3 px-4 font-medium text-slate-900">{aluno.nome}</td>
+                      <td className="py-3 px-4">{aluno.classe || 'Não informada'}</td>
+                      <td className="py-3 px-4">{aluno.telefone || aluno.celular || 'Não informado'}</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`inline-block px-2.5 py-1 text-xs font-semibold rounded-full ${
+                          isAtivo 
+                            ? 'bg-emerald-100 text-emerald-800' 
+                            : 'bg-rose-100 text-rose-800'
+                        }`}>
+                          {textoStatus}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      {imprimindo && abaAtiva === 'geral' && createPortal(
+      {imprimindo && createPortal(
         <div className="print-portal-container p-8 bg-white">
           <div className="mb-6 border-b pb-4">
             <h1 className="text-2xl font-bold text-slate-900">Relatório Geral de Alunos</h1>
