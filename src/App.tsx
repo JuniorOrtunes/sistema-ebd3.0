@@ -8,6 +8,7 @@ import { Encerramento } from './components/ebd-modules/Encerramento/Encerramento
 import { Comparativos } from './components/ebd-modules/Comparativos';
 import { Superintendentes } from './components/ebd-modules/Superintendentes';
 import RelatorioAlunos from './components/ebd-modules/RelatorioAlunos';
+import { RelatorioAniversariantes } from './components/ebd-modules/RelatorioAlunos/Aniversariantes/RelatorioAniversariantes';
 import Login from './components/Login';
 import Chamada from './components/Chamada';
 import { db } from './firebase';
@@ -98,7 +99,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-gray-50/50 overflow-hidden relative">
+    <div className="flex flex-col md:flex-row h-screen bg-gray-50/50 overflow-hidden relative print:h-auto print:overflow-visible">
       <Sidebar 
         abaAtiva={abaAtiva} 
         setAbaAtiva={setAbaAtiva} 
@@ -112,15 +113,19 @@ export default function App() {
         {abaAtiva === 'encerramento' && <Encerramento />}
         {abaAtiva === 'comparativos' && <Comparativos />}
         {abaAtiva === 'superintendentes' && <Superintendentes />}
-        
-        {/* Relatório Geral de Alunos conectado ao componente funcional */}
         {abaAtiva === 'relatorio-alunos' && (
           <RelatorioAlunos onVoltarParaDashboard={() => setAbaAtiva('dashboard')} />
         )}
         
+        {/* Relatório Geral de Alunos conectado ao componente funcional (já contendo a aba de Aniversariantes) */}
+        {abaAtiva === 'relatorio-aniversariantes' && (
+          <div className="p-6 max-w-6xl mx-auto bg-white rounded-xl shadow-sm">
+           <RelatorioAniversariantes />
+          </div>
+        )}
+        
         {/* Demais itens que continuam em construção */}
         {abaAtiva === 'hinos' && <EmConstrucao titulo="Cadastro de Hinos" onVoltarParaDashboard={() => setAbaAtiva('dashboard')} />}
-        {abaAtiva === 'relatorio-aniversariantes' && <EmConstrucao titulo="Relatório de Aniversariantes" onVoltarParaDashboard={() => setAbaAtiva('dashboard')} />}
       </main>
     </div>
   );
