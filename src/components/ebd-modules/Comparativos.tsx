@@ -91,16 +91,36 @@ export function Comparativos() {
     });
 
     const unsubEncerramento = onSnapshot(
-      collection(db, 'ebd_encerramento_dados'),
+      collection(db, 'ebd_fechamentos'),
       (snapshot) => {
-        const encerramento = snapshot.docs.map((doc) => {
-          const dataDoc = doc.data();
-          return {
-            id: doc.id,
-            ...dataDoc,
-            dataNormalizada: extrairDataStr(dataDoc.data),
-          };
-        }) as RegistroEncerramento[];
+        const encerramento: RegistroEncerramento[] = [];
+
+        snapshot.docs.forEach((docDoc) => {
+          const docData = docDoc.data();
+          const dataStr = docDoc.id; // O ID do documento em ebd_fechamentos é a data (ex: '2026-09-06')
+          
+          if (docData.classes && Array.isArray(docData.classes)) {
+            docData.classes.forEach((cls: any) => {
+              encerramento.push({
+                id: `${dataStr}-${cls.id || cls.nome}`,
+                data: dataStr,
+                classeId: cls.id,
+                nomeClasse: cls.nome,
+                presentes: Number(cls.presentes) || 0,
+                matriculados: Number(cls.matriculados) || 0,
+                dataNormalizada: dataStr,
+              });
+            });
+          } else {
+            encerramento.push({
+              id: docDoc.id,
+              data: dataStr,
+              presentes: Number(docData.presentes) || 0,
+              matriculados: Number(docData.matriculados) || 0,
+              dataNormalizada: dataStr,
+            });
+          }
+        });
 
         setDadosEncerramento(encerramento);
         setLoading(false);
