@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    match /chamadas/{document} {
+      allow read, write: if true;
+    }
+    
+    match /alunos/{document} {
+      allow read, write: if true;
+    }
+    
+    match /classes/{document} {
+      allow read, write: if true;
+    }
+
+    match /superintendentes/{document} {
+      allow read, write: if true;
+    }
+
+    // FONTE OFICIAL DO HISTÓRICO DE ENCERRAMENTO
+    match /ebd_fechamentos/{document} {
+      allow read, write: if true;
+    }
+
+    // Legado/Compatibilidade
+    match /ebd_encerramento_dados/{document} {
+      allow read, write: if true;
+    }
+
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
