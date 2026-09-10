@@ -5,7 +5,7 @@ import { Dashboard } from './components/ebd-modules/Dashboard/Dashboard';
 import { ClassesModule } from './components/ebd-modules/Classes';
 import { Alunos } from './components/ebd-modules/Alunos';
 import { Encerramento } from './components/ebd-modules/Encerramento/Encerramento';
-import { Comparativos } from './components/ebd-modules/Comparativos';
+import { Comparativos } from './components/ebd-modules/Comparativos/Comparativos';
 import { Superintendentes } from './components/ebd-modules/Superintendentes';
 import RelatorioAlunos from './components/ebd-modules/RelatorioAlunos';
 import { RelatorioAniversariantes } from './components/ebd-modules/RelatorioAlunos/Aniversariantes/RelatorioAniversariantes';
