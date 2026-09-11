@@ -9,11 +9,11 @@ import { Comparativos } from './components/ebd-modules/Comparativos/Comparativos
 import { Superintendentes } from './components/ebd-modules/Superintendentes';
 import RelatorioAlunos from './components/ebd-modules/RelatorioAlunos';
 import { RelatorioAniversariantes } from './components/ebd-modules/RelatorioAlunos/Aniversariantes/RelatorioAniversariantes';
+import { HinosIndex } from './components/ebd-modules/Hinos/HinosIndex'; // <--- Importação do Módulo de Hinos
 import Login from './components/Login';
 import Chamada from './components/Chamada';
 import { db } from './firebase';
 import { collection, getDocs } from 'firebase/firestore';
-import { EmConstrucao } from './components/EmConstrucao';
 
 export default function App() {
   const [perfilLogado, setPerfilLogado] = useState<'nenhum' | 'professor' | 'superintendencia'>(() => {
@@ -117,15 +117,14 @@ export default function App() {
           <RelatorioAlunos onVoltarParaDashboard={() => setAbaAtiva('dashboard')} />
         )}
         
-        {/* Relatório Geral de Alunos conectado ao componente funcional (já contendo a aba de Aniversariantes) */}
         {abaAtiva === 'relatorio-aniversariantes' && (
           <div className="p-6 max-w-6xl mx-auto bg-white rounded-xl shadow-sm">
            <RelatorioAniversariantes />
           </div>
         )}
         
-        {/* Demais itens que continuam em construção */}
-        {abaAtiva === 'hinos' && <EmConstrucao titulo="Cadastro de Hinos" onVoltarParaDashboard={() => setAbaAtiva('dashboard')} />}
+        {/* Módulo de Gestão e Escala de Hinos Oficial */}
+        {abaAtiva === 'hinos' && <HinosIndex />}
       </main>
     </div>
   );
