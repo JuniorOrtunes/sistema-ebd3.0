@@ -24,6 +24,10 @@ export default function App() {
     return localStorage.getItem('ebd_classe_professor') || '';
   });
 
+  const [nomeUsuarioLogado, setNomeUsuarioLogado] = useState<string>(() => {
+    return localStorage.getItem('ebd_nome_usuario') || 'Superintendência';
+  });
+
   const [superintendentes, setSuperintendentes] = useState<Superintendente[]>([]);
 
   useEffect(() => {
@@ -37,6 +41,14 @@ export default function App() {
       localStorage.removeItem('ebd_classe_professor');
     }
   }, [classeAtivaProfessor]);
+
+  useEffect(() => {
+    if (nomeUsuarioLogado) {
+      localStorage.setItem('ebd_nome_usuario', nomeUsuarioLogado);
+    } else {
+      localStorage.removeItem('ebd_nome_usuario');
+    }
+  }, [nomeUsuarioLogado]);
 
   useEffect(() => {
     async function carregarSuperintendentes() {
@@ -65,8 +77,11 @@ export default function App() {
           setClasseAtivaProfessor(classe);
           setPerfilLogado('professor');
         }}
-        onLoginSuperintendencia={() => {
+        onLoginSuperintendencia={(nomeSuperintendente?: string) => {
           setPerfilLogado('superintendencia');
+          if (nomeSuperintendente) {
+            setNomeUsuarioLogado(nomeSuperintendente);
+          }
         }}
       />
     );
@@ -103,8 +118,12 @@ export default function App() {
       <Sidebar 
         abaAtiva={abaAtiva} 
         setAbaAtiva={setAbaAtiva} 
-        usuarioLogadoNome="Superintendência"
-        onLogout={() => setPerfilLogado('nenhum')}
+        usuarioLogadoNome={nomeUsuarioLogado}
+        onLogout={() => {
+          setPerfilLogado('nenhum');
+          setNomeUsuarioLogado('Superintendência');
+          localStorage.removeItem('ebd_nome_usuario');
+        }}
       />
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8 print:overflow-visible print:h-auto print:p-0">

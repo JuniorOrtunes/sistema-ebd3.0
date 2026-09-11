@@ -77,12 +77,13 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
             </button>
           </div>
 
-          {/* Bloco fixo do usuário logo abaixo de Gestão Educacional */}
+         
+         {/* Bloco fixo do usuário logo abaixo de Gestão Educacional */}
           <div className="pt-2.5 border-t border-blue-900/40 flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse"></div>
             <div className="truncate">
-              <p className="text-[11px] font-semibold text-slate-200 truncate" title={usuarioLogadoNome || "Usuário Conectado"}>
-                {usuarioLogadoNome || "Usuário Conectado"}
+              <p className="text-[11px] font-semibold text-slate-200 truncate" title={usuarioLogadoNome ? `Olá, ${usuarioLogadoNome}` : "Usuário Conectado"}>
+                {usuarioLogadoNome ? `Olá, ${usuarioLogadoNome}` : "Usuário Conectado"}
               </p>
             </div>
           </div>
