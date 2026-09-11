@@ -157,7 +157,7 @@ export function Sidebar({ abaAtiva, setAbaAtiva, usuarioLogadoNome, onLogout }: 
                   }`}
                 >
                   <Music className="w-4 h-4" />
-                  <span>Hinos <span className="text-[9px] bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded ml-auto">Em breve</span></span>
+                  <span>Hinos</span>
                 </button>
               </div>
             )}
