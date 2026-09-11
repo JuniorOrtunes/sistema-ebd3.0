@@ -74,15 +74,36 @@ export const listarEscalaSemestral = async (): Promise<EscalaSemestralItem[]> =>
   }
 };
 
-export const salvarItemEscala = async (item: Omit<EscalaSemestralItem, 'id'>): Promise<string> => {
+export const salvarItemEscala = async (item: EscalaSemestralItem): Promise<string> => {
   try {
-    const docRef = await addDoc(collection(db, ESCALA_COLLECTION), {
-      ...item,
-      updatedAt: Timestamp.now()
-    });
-    return docRef.id;
+    if (item.id) {
+      const docRef = doc(db, ESCALA_COLLECTION, item.id);
+      await updateDoc(docRef, {
+        dataDomingo: item.dataDomingo,
+        hinoId: item.hinoId,
+        updatedAt: Timestamp.now()
+      });
+      return item.id;
+    } else {
+      const docRef = await addDoc(collection(db, ESCALA_COLLECTION), {
+        dataDomingo: item.dataDomingo,
+        hinoId: item.hinoId,
+        updatedAt: Timestamp.now()
+      });
+      return docRef.id;
+    }
   } catch (error) {
     console.error('Erro ao salvar item da escala:', error);
+    throw error;
+  }
+};
+
+export const excluirItemEscala = async (id: string): Promise<void> => {
+  try {
+    const docRef = doc(db, ESCALA_COLLECTION, id);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error('Erro ao excluir item da escala:', error);
     throw error;
   }
 };
