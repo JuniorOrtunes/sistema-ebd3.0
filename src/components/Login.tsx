@@ -6,7 +6,7 @@ import type { Superintendente } from '../lib/ebd';
 
 interface LoginProps {
   onLoginProfessor: (classeId: string) => void;
-  onLoginSuperintendencia: () => void;
+  onLoginSuperintendencia: (nomeSuperintendente: string) => void;
   superintendentes?: Superintendente[];
 }
 
@@ -73,18 +73,20 @@ export default function Login({ onLoginProfessor, onLoginSuperintendencia, super
     const listaAtiva = superintendentes.length > 0 
       ? superintendentes 
       : [
-          { usuario: 'ortunes', senha: '123', ativo: true },
-          { usuario: 'teste', senha: '123', ativo: true }
+          { usuario: 'ortunes', senha: '123', ativo: true, nome: 'Carlos Ortunes Junior' },
+          { usuario: 'teste', senha: '123', ativo: true, nome: 'Usuário Teste' }
         ];
 
-    const superintendenteEncontrado = listaAtiva.find(
+    const superintendenteEncontrado: any = listaAtiva.find(
       s => s.usuario.toLowerCase() === usuarioLimpo && 
            (s.senha ? s.senha === senhaLimpa : true) && 
            s.ativo !== false
     );
 
     if (superintendenteEncontrado) {
-      onLoginSuperintendencia();
+      // Pega o nome cadastrado no banco (ou usa a propriedade nome/nomeCompleto, ou cai no login digitado)
+      const nomeExibicao = superintendenteEncontrado.nome || superintendenteEncontrado.nomeCompleto || usuarioSuper;
+      onLoginSuperintendencia(nomeExibicao);
     } else {
       alert('Usuário ou senha incorretos!');
     }
