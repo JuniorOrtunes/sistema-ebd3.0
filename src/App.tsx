@@ -103,6 +103,7 @@ export default function App() {
       <Sidebar 
         abaAtiva={abaAtiva} 
         setAbaAtiva={setAbaAtiva} 
+        usuarioLogadoNome="Superintendência"
         onLogout={() => setPerfilLogado('nenhum')}
       />
 
