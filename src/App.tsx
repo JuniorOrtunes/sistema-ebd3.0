@@ -130,7 +130,9 @@ export default function App() {
         {abaAtiva === 'dashboard' && <Dashboard />}
         {abaAtiva === 'alunos' && <Alunos />}
         {abaAtiva === 'classes' && <ClassesModule />}
-        {abaAtiva === 'encerramento' && <Encerramento />}
+        {abaAtiva === 'encerramento' && (
+          <Encerramento onNavegarParaHinos={() => setAbaAtiva('hinos')} />
+        )}
         {abaAtiva === 'comparativos' && <Comparativos />}
         {abaAtiva === 'superintendentes' && <Superintendentes />}
         {abaAtiva === 'relatorio-alunos' && (
