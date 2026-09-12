@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { listarHinos, listarEscalaSemestral, salvarItemEscala, excluirItemEscala } from './hinosService';
 import type { Hino, EscalaSemestralItem } from './types';
 
@@ -12,6 +12,11 @@ export const EscalaSemestral: React.FC = () => {
   const [dataDomingo, setDataDomingo] = useState<string>('');
   const [hinoId, setHinoId] = useState<string>('');
   const [salvando, setSalvando] = useState<boolean>(false);
+
+  // Estados para o Autocomplete de Hinos
+  const [termoBuscaHino, setTermoBuscaHino] = useState<string>('');
+  const [mostrarDropdownHinos, setMostrarDropdownHinos] = useState<boolean>(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const carregarDados = async () => {
     try {
@@ -33,6 +38,37 @@ export const EscalaSemestral: React.FC = () => {
     carregarDados();
   }, []);
 
+  // Fechar dropdown ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setMostrarDropdownHinos(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Sincronizar termo de busca visual quando um hino já estiver selecionado
+  useEffect(() => {
+    if (hinoId) {
+      const hinoSelecionado = hinos.find(h => h.id === hinoId);
+      if (hinoSelecionado) {
+        setTermoBuscaHino(`${hinoSelecionado.numero} - ${hinoSelecionado.titulo} (${hinoSelecionado.hinario})`);
+      }
+    } else {
+      setTermoBuscaHino('');
+    }
+  }, [hinoId, hinos]);
+
+  const hinosFiltrados = hinos.filter((h) => {
+    const termo = termoBuscaHino.toLowerCase();
+    const numeroStr = String(h.numero).toLowerCase();
+    const tituloStr = h.titulo.toLowerCase();
+    const hinarioStr = h.hinario.toLowerCase();
+    return numeroStr.includes(termo) || tituloStr.includes(termo) || hinarioStr.includes(termo);
+  });
+
   const handleSalvar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dataDomingo || !hinoId) {
@@ -50,6 +86,7 @@ export const EscalaSemestral: React.FC = () => {
 
       setDataDomingo('');
       setHinoId('');
+      setTermoBuscaHino('');
       setIdEmEdicao(null);
       await carregarDados();
     } catch (err) {
@@ -60,10 +97,11 @@ export const EscalaSemestral: React.FC = () => {
     }
   };
 
-  const handleEditar = (item: EscalaSemestralItem) => {
-    setIdEmEdicao(item.id || null);
+ const handleEditar = (item: EscalaSemestralItem) => {
+    if (!item.id) return;
+    setIdEmEdicao(item.id);
     setDataDomingo(item.dataDomingo);
-    setHinoId(item.hinoId);
+    setHinoId(item.hinoId ?? '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -84,18 +122,17 @@ export const EscalaSemestral: React.FC = () => {
     setIdEmEdicao(null);
     setDataDomingo('');
     setHinoId('');
+    setTermoBuscaHino('');
   };
 
   return (
     <div className="space-y-6">
-      {/* Cabeçalho da Seção */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
         <h2 className="text-xl font-bold text-slate-800">Escala Semestral de Hinos</h2>
         <p className="text-sm text-slate-500 mt-1">
           {idEmEdicao ? 'Editando item da escala semestral' : 'Vincule os hinos oficiais aos domingos do semestre letivo da EBD'}
         </p>
 
-        {/* Formulário de Cadastro / Edição */}
         <form onSubmit={handleSalvar} className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
@@ -110,23 +147,47 @@ export const EscalaSemestral: React.FC = () => {
             />
           </div>
 
-          <div>
+          {/* Campo de Autocomplete de Hinos substituindo o select estático */}
+          <div className="relative" ref={dropdownRef}>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-              Selecionar Hino
+              Buscar e Selecionar Hino
             </label>
-            <select
-              value={hinoId}
-              onChange={(e) => setHinoId(e.target.value)}
+            <input
+              type="text"
+              value={termoBuscaHino}
+              onChange={(e) => {
+                setTermoBuscaHino(e.target.value);
+                setMostrarDropdownHinos(true);
+                if (!e.target.value) setHinoId('');
+              }}
+              onFocus={() => setMostrarDropdownHinos(true)}
+              placeholder="Digite o número ou título..."
               className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            >
-              <option value="">-- Escolha um hino --</option>
-              {hinos.map((h) => (
-                <option key={h.id} value={h.id}>
-                  {h.numero} - {h.titulo} ({h.hinario})
-                </option>
-              ))}
-            </select>
+            />
+
+            {mostrarDropdownHinos && (
+              <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                {hinosFiltrados.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-slate-500 italic">Nenhum hino encontrado.</div>
+                ) : (
+                  hinosFiltrados.map((h) => (
+                    <div
+                      key={h.id}
+                  onClick={() => {
+                       if (!h.id) return;
+
+                      setHinoId(h.id);
+                      setTermoBuscaHino(`${h.numero} - ${h.titulo} (${h.hinario})`);
+                      setMostrarDropdownHinos(false);
+                  }}
+                      className="px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 cursor-pointer transition border-b border-slate-50 last:border-none"
+                    >
+                      <span className="font-bold text-slate-900">#{h.numero}</span> - {h.titulo} <span className="text-xs text-slate-400">({h.hinario})</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -150,7 +211,6 @@ export const EscalaSemestral: React.FC = () => {
         </form>
       </div>
 
-      {/* Tabela de Escala */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
           <h3 className="font-bold text-slate-800">Domingos Escalados</h3>
@@ -178,7 +238,8 @@ export const EscalaSemestral: React.FC = () => {
               <tbody className="divide-y divide-slate-100 text-sm">
                 {escala.map((item) => {
                   const hinoEncontrado = hinos.find((h) => h.id === item.hinoId);
-                  const [ano, mes, dia] = item.dataDomingo.split('-');
+                  const partesData = item.dataDomingo ? item.dataDomingo.split('-') : [];
+                  const [ano, mes, dia] = partesData;
                   const dataFormatada = ano && mes && dia ? `${dia}/${mes}/${ano}` : item.dataDomingo;
 
                   return (
