@@ -4,9 +4,10 @@ import type { Hino, EscalaSemestralItem } from '../Hinos/types';
 
 interface HinoEncerramentoCardProps {
   dataSelecionada: string; // Formato 'YYYY-MM-DD'
+  onNavegarParaHinos?: () => void;
 }
 
-export const HinoEncerramentoCard: React.FC<HinoEncerramentoCardProps> = ({ dataSelecionada }) => {
+export const HinoEncerramentoCard: React.FC<HinoEncerramentoCardProps> = ({ dataSelecionada, onNavegarParaHinos }) => {
   const [hinosDisponiveis, setHinosDisponiveis] = useState<Hino[]>([]);
   const [hinoDoDia, setHinoDoDia] = useState<Hino | null>(null);
   const [itemEscalaId, setItemEscalaId] = useState<string | undefined>(undefined);
@@ -232,9 +233,13 @@ export const HinoEncerramentoCard: React.FC<HinoEncerramentoCardProps> = ({ data
               {hinoDoDia ? 'Alterar Hino' : 'Definir Hino'}
             </button>
           )}
-          <span className="text-xs text-slate-500 bg-white/80 px-3 py-1.5 rounded-lg border border-blue-100 hidden md:inline-block">
+          <button
+            type="button"
+            onClick={onNavegarParaHinos}
+            className="text-xs text-blue-600 hover:text-blue-800 bg-white/80 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 hidden md:inline-block transition shadow-sm cursor-pointer"
+          >
             Escala Semestral EBD
-          </span>
+          </button>
         </div>
       </div>
     </div>

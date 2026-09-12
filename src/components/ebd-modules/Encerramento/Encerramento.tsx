@@ -4,7 +4,11 @@ import { BoletimTable } from './BoletimTable';
 import { IndicadoresSecao } from './IndicadoresSecao';
 import { HinoEncerramentoCard } from './HinoEncerramentoCard'; // <--- Importação do card de hinos
 
-export function Encerramento() {
+interface EncerramentoProps {
+  onNavegarParaHinos?: () => void;
+}
+
+export function Encerramento({ onNavegarParaHinos }: EncerramentoProps) {
   const {
     dataSelecionada,
     setDataSelecionada,
@@ -32,7 +36,10 @@ export function Encerramento() {
       />
 
       {/* 1.1 HINO DO DIA (ESCALA SEMESTRAL) */}
-      <HinoEncerramentoCard dataSelecionada={dataSelecionada} />
+      <HinoEncerramentoCard 
+        dataSelecionada={dataSelecionada} 
+        onNavegarParaHinos={onNavegarParaHinos}
+      />
 
       {/* 2. BOLETIM E INDICADORES */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-6">
