@@ -65,7 +65,7 @@ O **Sistema EBD 3.0** é uma solução de gestão voltada para a Escola Bíblica
 
 ## 5. Fluxo de Dados e Persistência
 
-O sistema utiliza o **Firebase Firestore** para sincronização em tempo real. A persistência é gerenciada via `onSnapshot`, garantindo que qualquer alteração nos módulos (Chamada, Classes, Alunos) reflita instantaneamente no Dashboard e nos Relatórios.
+O sistema utiliza o **Firebase Firestore** para sincronização em tempo real. A persistência é gerenciada via `onSnapshot`, garantindo que qualquer alteração nos módulos (Chamada, Classes, Alunos, Hinos) reflita instantaneamente no Dashboard e nos Relatórios.
 
 ### 5.1 Coleções Firestore (confirmadas em `firestore.rules`)
 
@@ -78,7 +78,7 @@ O sistema utiliza o **Firebase Firestore** para sincronização em tempo real. A
 | `ebd_fechamentos` | **Fonte oficial** do histórico de Encerramento |
 | `ebd_encerramento_dados` | Legado/Compatibilidade (não usar como fonte de verdade) |
 
-> ⚠️ **Ponto de atenção:** não há uma coleção `hinos` explicitamente declarada em `firestore.rules` no momento da última verificação. Isso pode significar que ela está coberta pela regra genérica (`match /{document=**}`, que exige autenticação), ou que o arquivo de regras do repositório está desatualizado em relação à funcionalidade já publicada. Recomenda-se validar e, se necessário, adicionar uma regra dedicada para `hinos`, seguindo o mesmo padrão das demais coleções.
+> ⚠️ **Ponto de atenção:** não havia, na última verificação, uma coleção `hinos` (ou `escalaHinos`) explicitamente declarada em `firestore.rules`, mesmo com os módulos de Gestão de Hinos e Escala Semestral já ativos em produção (Issue #29). Recomenda-se confirmar se essas coleções estão cobertas por uma regra dedicada ou apenas pela regra genérica de fallback, e atualizar `firestore.rules` para refletir explicitamente essas coleções, mantendo o mesmo padrão de segurança das demais.
 
 ```
 rules_version = '2';
@@ -127,6 +127,8 @@ service cloud.firestore {
 - ✅ Banco de dados e autenticação em nuvem via Firebase Firestore, com sincronização em tempo real (`onSnapshot`).
 - ✅ Exportação de relatórios (Geral de Alunos e Aniversariantes) para PDF/impressão, via botão dedicado em cada tela.
 - ✅ Módulo de Gestão de Hinos (`Cadastros > Hinos`), com listagem, cadastro, edição e exclusão — entrega referente à **Issue #29**.
+- ✅ Escala Semestral de Hinos (aba interna em `Cadastros > Hinos`), vinculando hinos a domingos específicos do semestre letivo — também referente à **Issue #29**.
+- ✅ Integração do módulo de Hinos com o Encerramento: a tela exibe o "Hino Oficial do Domingo" resolvido a partir da Escala Semestral (selo "Validado na Escala"), com opção de troca manual via "Alterar Hino".
 - ✅ Padronização de ícones de ação (Editar/Excluir) via **Lucide React** nos componentes de listagem de Cadastros (Alunos, Classes, Superintendentes e Hinos).
 
 ### 7.2 Débito Técnico Conhecido (Issues abertas no repositório)
@@ -143,7 +145,7 @@ service cloud.firestore {
 
 ### 7.4 Roadmap — Médio Prazo
 
-- **Escala Semestral:** geração e validação de escalas semestrais de professores e hinos, integrada ao fluxo de Encerramento.
+Nenhum item pendente nesta categoria no momento — Escala Semestral e Gestão de Hinos foram concluídas (ver seção 7.1).
 
 ### 7.5 Roadmap — Longo Prazo
 

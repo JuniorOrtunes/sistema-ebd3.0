@@ -15,6 +15,8 @@
 - **Superintendente:** papel de liderança com privilégios administrativos plenos sobre o sistema, incluindo reabertura de encerramentos e gestão de permissões.
 - **Professor:** papel operacional restrito à sua(s) classe(s), com acesso à tela de chamada e ao lançamento de presenças.
 - **Hino:** registro do repertório de cânticos utilizados nas aulas e cultos da EBD, gerenciado no módulo `Cadastros > Hinos` (cadastro, edição e exclusão pela liderança).
+- **Escala Semestral:** planejamento que vincula um Hino específico a cada domingo do semestre letivo, cadastrado na aba "Escala Semestral" do módulo `Cadastros > Hinos`.
+- **Hino Oficial do Domingo:** hino resolvido automaticamente na tela de Encerramento a partir da Escala Semestral para a data em questão, identificado com o selo "Validado na Escala".
 
 ---
 
@@ -28,6 +30,8 @@ O sistema distingue dois perfis principais de acesso, cada um com escopo de resp
 | **Superintendente** | Acessa a visão completa da escola — Dashboard, todos os Relatórios, Comparativos, Cadastros e Encerramento — além de deter privilégios de auditoria, como a reabertura de um encerramento já realizado. |
 
 Essa segregação de acesso não é uma limitação arbitrária: existe para manter o foco operacional do professor durante a aula e preservar a integridade dos dados estruturais da escola.
+
+**Ponto de entrada:** essa segregação já começa na tela de login, que oferece dois fluxos distintos — "Sou professor(a)" (seleção direta da própria classe, sem senha, para agilizar o registro da chamada) e "Superintendência" (autenticação por usuário e senha, liberando o painel administrativo completo).
 
 ---
 
@@ -68,6 +72,14 @@ A **Idade** exibida no Relatório de Aniversariantes é calculada a partir da da
 
 - O filtro **Sala/Classe** permite alternar entre a visão consolidada (todas as salas) e a visão isolada de uma turma específica; quando uma turma é selecionada, todo o gráfico e a tabela devem refletir exclusivamente os dados dela.
 - O filtro **Mês de Referência** deve atualizar instantaneamente o período analisado, tanto no gráfico quanto na tabela, com base nos dados sincronizados em tempo real com o Firebase.
+
+### 4.5 Resolução do Hino Oficial do Domingo
+
+Ao abrir a tela de Encerramento para uma data específica, o sistema deve buscar na Escala Semestral (`Cadastros > Hinos`) se há um hino vinculado àquela data:
+
+- Se houver um hino escalado, ele é exibido automaticamente como "Hino Oficial do Domingo", com o selo "Validado na Escala".
+- Se não houver hino escalado para a data, o campo deve permitir seleção manual do hino pelo botão "Alterar Hino", sem bloquear o fluxo de Encerramento.
+- A alteração manual do hino do dia não deve sobrescrever silenciosamente a Escala Semestral — trata-se de uma exceção pontual para aquele Encerramento específico.
 
 ---
 
