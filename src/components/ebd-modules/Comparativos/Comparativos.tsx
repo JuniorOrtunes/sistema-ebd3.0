@@ -8,6 +8,14 @@ import { ComparativosFiltros } from './ComparativosFiltros';
 import { ComparativosGrafico } from './ComparativosGrafico';
 import { ComparativosTabela } from './ComparativosTabela';
 
+interface AlunoFirestore {
+  id: string;
+  classeId?: string;
+  classe?: string;
+  ativo?: boolean;
+  situacao?: string;
+}
+
 export function Comparativos() {
   const [tipoVisualizacao, setTipoVisualizacao] = useState<'semana' | 'mes'>('semana');
   const [classeFiltro, setClasseFiltro] = useState('todas');
@@ -15,6 +23,7 @@ export function Comparativos() {
 
   const [listaClasses, setListaClasses] = useState<Classe[]>([]);
   const [dadosEncerramento, setDadosEncerramento] = useState<RegistroEncerramento[]>([]);
+  const [listaAlunos, setListaAlunos] = useState<AlunoFirestore[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,6 +37,15 @@ export function Comparativos() {
 
       classes.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { numeric: true }));
       setListaClasses(classes);
+    });
+
+    // Sincroniza os alunos para contagem estrita de ativos (Evita contar inativos como matriculados)
+    const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
+      const alunos = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as AlunoFirestore[];
+      setListaAlunos(alunos);
     });
 
     const unsubEncerramento = onSnapshot(
@@ -73,19 +91,48 @@ export function Comparativos() {
 
     return () => {
       unsubClasses();
+      unsubAlunos();
       unsubEncerramento();
     };
   }, []);
 
+  // Recalcula dinamicamente os matriculados considerando exclusivamente alunos ATIVOS
+  const dadosEncerramentoComAlunosAtivos = useMemo(() => {
+    return dadosEncerramento.map((registro) => {
+      // Filtra apenas alunos ativos pertencentes à classe e no período correspondente
+      const ativosDaClasse = listaAlunos.filter((aluno) => {
+        const isAtivo = aluno.ativo !== false && aluno.situacao !== 'inativo';
+        if (!isAtivo) return false;
+
+        const atendeClasse = 
+          !registro.classeId && !registro.nomeClasse ? true :
+          (registro.classeId && aluno.classeId === registro.classeId) ||
+          (registro.nomeClasse && (aluno.classe === registro.nomeClasse || aluno.classeId === registro.classeId));
+
+        return atendeClasse;
+      });
+
+      // Se houver alunos ativos mapeados, substitui o matriculado bruto pelo total real de ativos
+      const matriculadosAtivos = ativosDaClasse.length > 0 
+        ? ativosDaClasse.length 
+        : registro.matriculados; // Fallback caso não encontre correspondência direta
+
+      return {
+        ...registro,
+        matriculados: matriculadosAtivos,
+      };
+    });
+  }, [dadosEncerramento, listaAlunos]);
+
   const mesesDisponiveis = useMemo(() => {
     return Array.from(
       new Set(
-        dadosEncerramento
+        dadosEncerramentoComAlunosAtivos
           .map((d) => d.dataNormalizada?.substring(0, 7))
           .filter(Boolean)
       )
     ).sort() as string[];
-  }, [dadosEncerramento]);
+  }, [dadosEncerramentoComAlunosAtivos]);
 
   useEffect(() => {
     if (mesesDisponiveis.length > 0 && !mesesDisponiveis.includes(mesFiltro)) {
@@ -94,7 +141,7 @@ export function Comparativos() {
   }, [mesesDisponiveis, mesFiltro]);
 
   const dadosFiltradosMes = useMemo(() => {
-    return dadosEncerramento.filter((d) => {
+    return dadosEncerramentoComAlunosAtivos.filter((d) => {
       if (!d.dataNormalizada) return false;
       const pertenceMes = d.dataNormalizada.startsWith(mesFiltro);
       const atendeClasse =
@@ -103,7 +150,7 @@ export function Comparativos() {
         d.nomeClasse === classeFiltro;
       return pertenceMes && atendeClasse;
     });
-  }, [dadosEncerramento, mesFiltro, classeFiltro]);
+  }, [dadosEncerramentoComAlunosAtivos, mesFiltro, classeFiltro]);
 
   const domingosEvolucao = useMemo(() => {
     const domingosDoMesMap = new Map<string, { presentes: number; matriculados: number }>();
@@ -148,7 +195,7 @@ export function Comparativos() {
 
   const mesesEvolucao = useMemo(() => {
     return mesesDisponiveis.map((mes, index, arr) => {
-      const registrosMes = dadosEncerramento.filter((d) => {
+      const registrosMes = dadosEncerramentoComAlunosAtivos.filter((d) => {
         const atendeClasse =
           classeFiltro === 'todas' ||
           d.classeId === classeFiltro ||
@@ -164,7 +211,7 @@ export function Comparativos() {
 
       if (index > 0) {
         const mesAnterior = arr[index - 1];
-        const registrosMesAnt = dadosEncerramento.filter((d) => {
+        const registrosMesAnt = dadosEncerramentoComAlunosAtivos.filter((d) => {
           const atendeClasse =
             classeFiltro === 'todas' ||
             d.classeId === classeFiltro ||
@@ -193,7 +240,7 @@ export function Comparativos() {
         cor: CORES_CLASSES[index % CORES_CLASSES.length],
       };
     });
-  }, [dadosEncerramento, mesesDisponiveis, classeFiltro]);
+  }, [dadosEncerramentoComAlunosAtivos, mesesDisponiveis, classeFiltro]);
 
   const dadosTabela = useMemo(() => {
     return tipoVisualizacao === 'semana' ? domingosEvolucao : [...mesesEvolucao].reverse();
