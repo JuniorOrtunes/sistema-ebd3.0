@@ -8,6 +8,9 @@ export function Superintendentes() {
   const [superintendentes, setSuperintendentes] = useState<Superintendente[]>([]);
   const [carregando, setCarregando] = useState(true);
 
+  // Recupera o nome do usuário logado atualmente na sessão
+  const nomeUsuarioLogado = localStorage.getItem('ebd_nome_usuario') || '';
+
   // Modais e Estados do Formulário
   const [modalAberto, setModalAberto] = useState(false);
   const [modalSenhaAberto, setModalSenhaAberto] = useState(false);
@@ -34,12 +37,19 @@ export function Superintendentes() {
         const lista: Superintendente[] = [];
         querySnapshot.forEach((documento) => {
           const data = documento.data();
+          const nomeRegistro = data.nome || '';
+          
+          // Identifica dinamicamente se o registro corresponde ao usuário logado na sessão atual
+          const isVoceAtual = nomeUsuarioLogado 
+            ? nomeRegistro.trim().toLowerCase() === nomeUsuarioLogado.trim().toLowerCase()
+            : (data.isVoce || false);
+
           lista.push({
             id: documento.id,
-            nome: data.nome || '',
+            nome: nomeRegistro,
             usuario: data.usuario || '',
             dataCadastro: data.dataCadastro || new Date().toLocaleDateString('pt-BR'),
-            isVoce: data.isVoce || false,
+            isVoce: isVoceAtual,
           });
         });
         setSuperintendentes(lista);
@@ -52,7 +62,7 @@ export function Superintendentes() {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [nomeUsuarioLogado]);
 
   // Abrir modal para novo
   const abrirNovo = () => {
