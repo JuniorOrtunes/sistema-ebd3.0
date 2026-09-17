@@ -11,8 +11,6 @@ import { ComparativosTabela } from './ComparativosTabela';
 interface AlunoFirestore {
   id: string;
   classeId?: string;
-  classe?: string;
-  ativo?: boolean;
   situacao?: string;
 }
 
@@ -39,7 +37,7 @@ export function Comparativos() {
       setListaClasses(classes);
     });
 
-    // Sincroniza os alunos para contagem estrita de ativos (Evita contar inativos como matriculados)
+    // Sincronização em tempo real da coleção de alunos para contagem estrita de ativos
     const unsubAlunos = onSnapshot(collection(db, 'alunos'), (snapshot) => {
       const alunos = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -96,26 +94,20 @@ export function Comparativos() {
     };
   }, []);
 
-  // Recalcula dinamicamente os matriculados considerando exclusivamente alunos ATIVOS
+  // Recalcula o denominador de matriculados considerando exclusivamente alunos com situacao === 'Ativo'
   const dadosEncerramentoComAlunosAtivos = useMemo(() => {
     return dadosEncerramento.map((registro) => {
-      // Filtra apenas alunos ativos pertencentes à classe e no período correspondente
       const ativosDaClasse = listaAlunos.filter((aluno) => {
-        const isAtivo = aluno.ativo !== false && aluno.situacao !== 'inativo';
+        const isAtivo = aluno.situacao === 'Ativo';
         if (!isAtivo) return false;
 
-        const atendeClasse = 
-          !registro.classeId && !registro.nomeClasse ? true :
-          (registro.classeId && aluno.classeId === registro.classeId) ||
-          (registro.nomeClasse && (aluno.classe === registro.nomeClasse || aluno.classeId === registro.classeId));
-
-        return atendeClasse;
+        if (!registro.classeId) return true;
+        return aluno.classeId === registro.classeId;
       });
 
-      // Se houver alunos ativos mapeados, substitui o matriculado bruto pelo total real de ativos
-      const matriculadosAtivos = ativosDaClasse.length > 0 
+      const matriculadosAtivos = registro.classeId 
         ? ativosDaClasse.length 
-        : registro.matriculados; // Fallback caso não encontre correspondência direta
+        : registro.matriculados;
 
       return {
         ...registro,
