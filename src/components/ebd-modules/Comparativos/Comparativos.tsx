@@ -228,8 +228,28 @@ export function Comparativos() {
         matriculados = registrosMes[0].matriculados;
       }
 
-      const temFrequenciaAtual = matriculados > 0;
-      const frequenciaNum = temFrequenciaAtual ? Math.round((presentes / matriculados) * 100) : 0;
+      // Calcula a frequência mensal baseada na média dos domingos do mês para evitar distorções acima de 100%
+      const domingosDoMesMap = new Map<string, { presentes: number }>();
+      registrosMes.forEach((d) => {
+        const dataKey = d.dataNormalizada!;
+        if (!domingosDoMesMap.has(dataKey)) {
+          domingosDoMesMap.set(dataKey, { presentes: 0 });
+        }
+        domingosDoMesMap.get(dataKey)!.presentes += Number(d.presentes) || 0;
+      });
+
+      const frequenciasDomingos: number[] = [];
+      domingosDoMesMap.forEach((vals) => {
+        if (matriculados > 0) {
+          frequenciasDomingos.push(Math.round((vals.presentes / matriculados) * 100));
+        }
+      });
+
+      const frequenciaNum = frequenciasDomingos.length > 0
+        ? Math.round(frequenciasDomingos.reduce((a, b) => a + b, 0) / frequenciasDomingos.length)
+        : 0;
+
+      const temFrequenciaAtual = matriculados > 0 && frequenciasDomingos.length > 0;
       let vsAnterior = '—';
 
       if (index > 0) {
@@ -242,7 +262,15 @@ export function Comparativos() {
           return d.dataNormalizada?.startsWith(mesAnterior) && atendeClasse;
         });
 
-        const presAnt = registrosMesAnt.reduce((acc, cur) => acc + (Number(cur.presentes) || 0), 0);
+        const domingosMesAntMap = new Map<string, { presentes: number }>();
+        registrosMesAnt.forEach((d) => {
+          const dataKey = d.dataNormalizada!;
+          if (!domingosMesAntMap.has(dataKey)) {
+            domingosMesAntMap.set(dataKey, { presentes: 0 });
+          }
+          domingosMesAntMap.get(dataKey)!.presentes += Number(d.presentes) || 0;
+        });
+
         let matAnt = 0;
         if (classeFiltro === 'todas') {
           matAnt = ativosTotaisCount;
@@ -254,9 +282,16 @@ export function Comparativos() {
           matAnt = registrosMesAnt[0].matriculados;
         }
 
-        if (matAnt > 0 && temFrequenciaAtual) {
-          const freqAnt = Math.round((presAnt / matAnt) * 100);
-          const diffFreq = frequenciaNum - freqAnt;
+        const freqAnts: number[] = [];
+        domingosMesAntMap.forEach((vals) => {
+          if (matAnt > 0) {
+            freqAnts.push(Math.round((vals.presentes / matAnt) * 100));
+          }
+        });
+
+        if (freqAnts.length > 0 && temFrequenciaAtual) {
+          const freqAntMedia = Math.round(freqAnts.reduce((a, b) => a + b, 0) / freqAnts.length);
+          const diffFreq = frequenciaNum - freqAntMedia;
           vsAnterior = diffFreq > 0 ? `+${diffFreq}%` : `${diffFreq}%`;
         }
       }
