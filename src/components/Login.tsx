@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, UserCheck, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Superintendente } from '../lib/ebd';
 
@@ -15,7 +15,7 @@ interface ClasseItem {
   nome: string;
 }
 
-export default function Login({ onLoginProfessor, onLoginSuperintendencia, superintendentes = [] }: LoginProps) {
+export default function Login({ onLoginProfessor, onLoginSuperintendencia }: LoginProps) {
   const [classeSelecionada, setClasseSelecionada] = useState('');
   const [mostrarFormSuper, setMostrarFormSuper] = useState(false);
   
@@ -24,9 +24,40 @@ export default function Login({ onLoginProfessor, onLoginSuperintendencia, super
   const [senhaSuper, setSenhaSuper] = useState('');
   const [mostrarSenhaSuper, setMostrarSenhaSuper] = useState(false);
 
+  // Lista dinâmica de superintendentes vindas do Firestore em tempo real
+  const [superintendentesList, setSuperintendentesList] = useState<Superintendente[]>([]);
+
   // Lista dinâmica de classes vindas do Firestore
   const [classesList, setClassesList] = useState<ClasseItem[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(true);
+
+  // Sincronizar superintendentes em tempo real via onSnapshot para acesso imediato de novos cadastros
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, 'superintendentes'),
+      (querySnapshot) => {
+        const lista: Superintendente[] = [];
+        querySnapshot.forEach((documento) => {
+          const data = documento.data();
+          lista.push({
+            id: documento.id,
+            nome: data.nome || '',
+            usuario: data.usuario || '',
+            senha: data.senha || '',
+            ativo: data.ativo !== false,
+            dataCadastro: data.dataCadastro || '',
+            isVoce: data.isVoce || false,
+          });
+        });
+        setSuperintendentesList(lista);
+      },
+      (error) => {
+        console.error('Erro ao sincronizar superintendentes no Login:', error);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
 
   // Carregar as classes cadastradas no Firestore ao abrir o login
   useEffect(() => {
@@ -69,9 +100,9 @@ export default function Login({ onLoginProfessor, onLoginSuperintendencia, super
     const usuarioLimpo = usuarioSuper.trim().toLowerCase();
     const senhaLimpa = senhaSuper.trim();
 
-    // Validação baseada na lista real de superintendentes (props ou fallback padrão)
-    const listaAtiva = superintendentes.length > 0 
-      ? superintendentes 
+    // Validação baseada na lista real sincronizada em tempo real (ou fallback padrão)
+    const listaAtiva = superintendentesList.length > 0 
+      ? superintendentesList 
       : [
           { usuario: 'ortunes', senha: '123', ativo: true, nome: 'Carlos Ortunes Junior' },
           { usuario: 'teste', senha: '123', ativo: true, nome: 'Usuário Teste' }
@@ -84,7 +115,6 @@ export default function Login({ onLoginProfessor, onLoginSuperintendencia, super
     );
 
     if (superintendenteEncontrado) {
-      // Pega o nome cadastrado no banco (ou usa a propriedade nome/nomeCompleto, ou cai no login digitado)
       const nomeExibicao = superintendenteEncontrado.nome || superintendenteEncontrado.nomeCompleto || usuarioSuper;
       onLoginSuperintendencia(nomeExibicao);
     } else {

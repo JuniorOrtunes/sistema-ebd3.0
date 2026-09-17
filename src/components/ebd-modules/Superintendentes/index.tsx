@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { Superintendente } from '../../../lib/ebd';
 import { UserPlus, Key, Eye, EyeOff, X } from 'lucide-react';
 import { db } from '../../../firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
 export function Superintendentes() {
   const [superintendentes, setSuperintendentes] = useState<Superintendente[]>([]);
@@ -25,33 +25,33 @@ export function Superintendentes() {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
 
-  // Buscar superintendentes do Firebase ao carregar a tela
-  const carregarSuperintendentes = async () => {
-    try {
-      setCarregando(true);
-      const querySnapshot = await getDocs(collection(db, 'superintendentes'));
-      const lista: Superintendente[] = [];
-      querySnapshot.forEach((documento) => {
-        const data = documento.data();
-        lista.push({
-          id: documento.id,
-          nome: data.nome || '',
-          usuario: data.usuario || '',
-          dataCadastro: data.dataCadastro || new Date().toLocaleDateString('pt-BR'),
-          isVoce: data.isVoce || false,
-        });
-      });
-      setSuperintendentes(lista);
-    } catch (error) {
-      console.error('Erro ao carregar superintendentes:', error);
-      alert('Erro ao carregar dados do Firebase.');
-    } finally {
-      setCarregando(false);
-    }
-  };
-
+  // Sincronização em tempo real de superintendentes via onSnapshot do Firestore
   useEffect(() => {
-    carregarSuperintendentes();
+    setCarregando(true);
+    const unsubscribe = onSnapshot(
+      collection(db, 'superintendentes'),
+      (querySnapshot) => {
+        const lista: Superintendente[] = [];
+        querySnapshot.forEach((documento) => {
+          const data = documento.data();
+          lista.push({
+            id: documento.id,
+            nome: data.nome || '',
+            usuario: data.usuario || '',
+            dataCadastro: data.dataCadastro || new Date().toLocaleDateString('pt-BR'),
+            isVoce: data.isVoce || false,
+          });
+        });
+        setSuperintendentes(lista);
+        setCarregando(false);
+      },
+      (error) => {
+        console.error('Erro ao sincronizar superintendentes:', error);
+        setCarregando(false);
+      }
+    );
+
+    return () => unsubscribe();
   }, []);
 
   // Abrir modal para novo
@@ -120,7 +120,6 @@ export function Superintendentes() {
       }
 
       setModalAberto(false);
-      await carregarSuperintendentes();
     } catch (error) {
       console.error('Erro ao salvar superintendente:', error);
       alert('Erro ao salvar no banco de dados.');
@@ -162,7 +161,6 @@ export function Superintendentes() {
     if (confirm('Tem certeza que deseja excluir este superintendente?')) {
       try {
         await deleteDoc(doc(db, 'superintendentes', id));
-        await carregarSuperintendentes();
       } catch (error) {
         console.error('Erro ao excluir superintendente:', error);
         alert('Erro ao excluir o registro.');
