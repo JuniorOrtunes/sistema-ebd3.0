@@ -95,7 +95,7 @@ export function Comparativos() {
     };
   }, []);
 
-  // Alunos Ativos totais e por classe com base estrita em situacao === 'Ativo'
+  // Total geral de alunos com situacao === 'Ativo' na escola inteira
   const ativosTotaisCount = useMemo(() => {
     return listaAlunos.filter((a) => a.situacao === 'Ativo').length;
   }, [listaAlunos]);
@@ -107,20 +107,25 @@ export function Comparativos() {
       if (!classeIdParam && !nomeClasseParam) return true;
 
       const matchId = classeIdParam && (a.classeId === classeIdParam || a.id === classeIdParam);
-      const matchNome = nomeClasseParam && (a.classe === nomeClasseParam || a.classeId === nomeClasseParam);
+      const matchNome = nomeClasseParam && (a.classe === nomeClasseParam || a.classeId === classeIdParam);
       return matchId || matchNome;
     });
     return ativos.length;
   };
 
-  // Substitui o denominador histórico pelo total real de alunos ativos (respeitando a regra do filtro)
+  // Ajusta o denominador de cada registro com base estrita no filtro selecionado ("todas" ou classe específica)
   const dadosEncerramentoComAlunosAtivos = useMemo(() => {
     return dadosEncerramento.map((registro) => {
       let matriculadosReais = ativosTotaisCount;
 
-      if (registro.classeId || registro.nomeClasse) {
+      if (classeFiltro !== 'todas') {
+        const classeAlvo = listaClasses.find(c => c.id === classeFiltro || c.nome === classeFiltro);
+        matriculadosReais = getAtivosDaClasse(classeFiltro, classeAlvo?.nome);
+      } else if (registro.classeId || registro.nomeClasse) {
         const countTurma = getAtivosDaClasse(registro.classeId, registro.nomeClasse);
-        matriculadosReais = countTurma > 0 ? countTurma : 0;
+        if (countTurma > 0) {
+          matriculadosReais = countTurma;
+        }
       }
 
       return {
@@ -128,7 +133,7 @@ export function Comparativos() {
         matriculados: matriculadosReais,
       };
     });
-  }, [dadosEncerramento, listaAlunos, ativosTotaisCount]);
+  }, [dadosEncerramento, listaAlunos, ativosTotaisCount, classeFiltro, listaClasses]);
 
   const mesesDisponiveis = useMemo(() => {
     return Array.from(
@@ -164,7 +169,7 @@ export function Comparativos() {
     dadosFiltradosMes.forEach((d) => {
       const dataKey = d.dataNormalizada!;
       if (!domingosDoMesMap.has(dataKey)) {
-        domingosDoMesMap.set(dataKey, { presentes: 0, matriculados: d.matriculados });
+        domingosDoMesMap.set(dataKey, { presentes: 0, matriculados: classeFiltro === 'todas' ? ativosTotaisCount : d.matriculados });
       }
       const atual = domingosDoMesMap.get(dataKey)!;
       atual.presentes += Number(d.presentes) || 0;
@@ -173,14 +178,16 @@ export function Comparativos() {
     return Array.from(domingosDoMesMap.entries())
       .sort(([dataA], [dataB]) => dataA.localeCompare(dataB))
       .map(([data, vals], index, arr) => {
-        const temFrequenciaAtual = vals.matriculados > 0;
-        const freqNum = temFrequenciaAtual ? Math.round((vals.presentes / vals.matriculados) * 100) : 0;
+        const matriculadosFinal = classeFiltro === 'todas' ? ativosTotaisCount : vals.matriculados;
+        const temFrequenciaAtual = matriculadosFinal > 0;
+        const freqNum = temFrequenciaAtual ? Math.round((vals.presentes / matriculadosFinal) * 100) : 0;
         let vsAnterior = '—';
 
         if (index > 0) {
           const prevVals = arr[index - 1][1];
-          if (prevVals.matriculados > 0 && temFrequenciaAtual) {
-            const prevFreq = Math.round((prevVals.presentes / prevVals.matriculados) * 100);
+          const prevMatriculados = classeFiltro === 'todas' ? ativosTotaisCount : prevVals.matriculados;
+          if (prevMatriculados > 0 && temFrequenciaAtual) {
+            const prevFreq = Math.round((prevVals.presentes / prevMatriculados) * 100);
             const diff = freqNum - prevFreq;
             vsAnterior = diff > 0 ? `+${diff}%` : `${diff}%`;
           }
@@ -189,14 +196,14 @@ export function Comparativos() {
         return {
           referencia: formatarDataBR(data),
           presentes: vals.presentes,
-          matriculados: vals.matriculados,
+          matriculados: matriculadosFinal,
           frequenciaNum: freqNum,
           frequencia: temFrequenciaAtual ? `${freqNum}%` : '—',
           vsAnterior,
           cor: CORES_CLASSES[index % CORES_CLASSES.length],
         };
       });
-  }, [dadosFiltradosMes]);
+  }, [dadosFiltradosMes, classeFiltro, ativosTotaisCount]);
 
   const mesesEvolucao = useMemo(() => {
     return mesesDisponiveis.map((mes, index, arr) => {
@@ -210,7 +217,6 @@ export function Comparativos() {
 
       const presentes = registrosMes.reduce((acc, cur) => acc + (Number(cur.presentes) || 0), 0);
       
-      // EVITA DUPLICAÇÃO DO DENOMINADOR: O matriculado mensal reflete a contagem única de ativos da turma/geral, e não a soma multiplicada pelos domingos
       let matriculados = 0;
       if (classeFiltro === 'todas') {
         matriculados = ativosTotaisCount;
