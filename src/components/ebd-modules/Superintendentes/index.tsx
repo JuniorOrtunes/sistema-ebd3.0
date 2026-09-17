@@ -25,7 +25,7 @@ export function Superintendentes() {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
 
-  // Escutar superintendentes do Firebase em tempo real via onSnapshot
+  // Sincronização em tempo real de superintendentes via onSnapshot do Firestore
   useEffect(() => {
     setCarregando(true);
     const unsubscribe = onSnapshot(
@@ -46,13 +46,11 @@ export function Superintendentes() {
         setCarregando(false);
       },
       (error) => {
-        console.error('Erro ao carregar superintendentes em tempo real:', error);
-        alert('Erro ao carregar dados do Firebase.');
+        console.error('Erro ao sincronizar superintendentes:', error);
         setCarregando(false);
       }
     );
 
-    // Limpa o listener ao desmontar o componente
     return () => unsubscribe();
   }, []);
 
